@@ -5,6 +5,7 @@
  */
 import { CONFIG } from '../core/config.js';
 import { planShare, sparklinePoints } from '../core/insights.js';
+import { t, getLocale } from '../i18n/index.js';
 
 /** @returns {HTMLElement} */
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -17,15 +18,6 @@ const SWEEP_DEG = 270;
 
 const PING_SCALE = [0, 5, 10, 20, 30, 50, 75, 100, 150, 250, 500, 1000];
 
-const PHASE_LABELS = {
-  idle: 'Готовий',
-  connecting: 'Пошук сервера…',
-  ping: 'Пінг',
-  download: 'Завантаження',
-  upload: 'Вивантаження',
-  done: 'Готово',
-};
-
 export const formatMbps = (v) => {
   if (v == null || Number.isNaN(v)) return '—';
   // ≥ 100 — цілі числа (у т. ч. гігабітні канали: «1234», а не «1.23k» — так однозначніше й парситься)
@@ -35,8 +27,8 @@ export const formatMbps = (v) => {
 };
 export const formatMs = (v) => (v == null || Number.isNaN(v) ? '—' : v >= 100 ? v.toFixed(0) : v.toFixed(1));
 export const formatBytes = (b) => {
-  if (!b) return '0 Б';
-  const u = ['Б', 'КБ', 'МБ', 'ГБ'];
+  const u = t('unit.bytes').split('|');
+  if (!b) return `0 ${u[0]}`;
   const i = Math.min(u.length - 1, Math.floor(Math.log(b) / Math.log(1024)));
   return `${(b / 1024 ** i).toFixed(i ? 1 : 0)} ${u[i]}`;
 };
@@ -175,8 +167,9 @@ export class UIController {
 
   setPhase(phase) {
     this.el.gauge.dataset.phase = phase;
-    this.el.phase.textContent = PHASE_LABELS[phase] ?? phase;
-    this.el.unit.textContent = phase === 'ping' ? 'мс' : 'Мбіт/с';
+    this.phase = phase;
+    this.el.phase.textContent = t(`phase.${phase}`);
+    this.el.unit.textContent = phase === 'ping' ? t('unit.ms') : t('unit.mbps');
     this.setGaugeScale(phase === 'ping' ? 'ping' : 'speed');
 
     const order = ['ping', 'download', 'upload'];
@@ -190,6 +183,13 @@ export class UIController {
       this.setGaugeValue(0);
       this.setPhaseProgress(0);
     }
+  }
+
+  /** Перекладає підпис фази й одиниці, не чіпаючи стан датчика (для зміни мови) */
+  relabel() {
+    const phase = this.phase ?? 'idle';
+    this.el.phase.textContent = t(`phase.${phase}`);
+    this.el.unit.textContent = phase === 'ping' ? t('unit.ms') : t('unit.mbps');
   }
 
   setPhaseProgress(p) {
@@ -241,8 +241,9 @@ export class UIController {
       el.hidden = !d;
       if (!d) continue;
       el.dataset.trend = d.trend;
-      el.textContent = d.trend === 'same' ? '≈ без змін' : `${d.delta > 0 ? '↑' : '↓'} ${Math.abs(d.pct).toFixed(0)}%`;
-      el.title = 'Порівняно з попереднім тестом';
+      el.textContent =
+        d.trend === 'same' ? t('delta.same') : `${d.delta > 0 ? '↑' : '↓'} ${Math.abs(d.pct).toFixed(0)}%`;
+      el.title = t('delta.title');
     }
   }
 
@@ -263,14 +264,15 @@ export class UIController {
     if (!share) return;
     box.dataset.level = share.level;
     $('#plan-fill').style.transform = `scaleX(${Math.min(1, share.pct / 100)})`;
-    const verdict = share.level === 'good' ? 'у нормі' : share.level === 'ok' ? 'помітно нижче' : 'значно нижче';
     const strong = document.createElement('strong');
     strong.textContent = `${share.pct.toFixed(0)}%`;
-    $('#plan-text').replaceChildren(
-      'Завантаження — ',
-      strong,
-      ` від тарифу (${formatMbps(mbps)} з ${formatMbps(planMbps)} Мбіт/с), ${verdict}`,
-    );
+    // Текст з плейсхолдером {pct}, який стає <strong>
+    const [before, after] = t('plan.text', {
+      mbps: formatMbps(mbps),
+      plan: formatMbps(planMbps),
+      verdict: t(`plan.${share.level}`),
+    }).split('{pct}');
+    $('#plan-text').replaceChildren(before, strong, after ?? '');
   }
 
   resetMetrics() {
@@ -288,48 +290,41 @@ export class UIController {
    * @param {import('../core/types.js').TestResult} r
    */
   showResults(r) {
-    this.setMetric('ping', r.ping.median, `мін ${formatMs(r.ping.min)} · макс ${formatMs(r.ping.max)}`);
+    this.setMetric('ping', r.ping.median, t('metric.minmax', { min: formatMs(r.ping.min), max: formatMs(r.ping.max) }));
     this.setMetric(
       'jitter',
       r.ping.jitter,
-      r.ping.jitter < 5 ? 'Відмінно' : r.ping.jitter < 20 ? 'Нормально' : 'Високий',
+      t(r.ping.jitter < 5 ? 'metric.jitter.great' : r.ping.jitter < 20 ? 'metric.jitter.ok' : 'metric.jitter.high'),
     );
-    this.setMetric('loss', r.ping.loss, r.ping.loss === 0 ? 'Без втрат' : 'Частина запитів без відповіді');
+    this.setMetric('loss', r.ping.loss, t(r.ping.loss === 0 ? 'metric.loss.none' : 'metric.loss.some'));
     for (const dir of /** @type {const} */ (['download', 'upload'])) {
       const d = r[dir];
       const parts = [
-        d.mbpsAvg != null ? `сер. ${formatMbps(d.mbpsAvg)}` : null,
+        d.mbpsAvg != null ? t('metric.avg', { value: formatMbps(d.mbpsAvg) }) : null,
         formatBytes(d.bytes),
-        `${(d.durationMs / 1000).toFixed(1)} с`,
-        d.stoppedEarly ? 'достроково' : null,
+        `${(d.durationMs / 1000).toFixed(1)} ${t('unit.s')}`,
+        d.stoppedEarly ? t('metric.early') : null,
       ].filter(Boolean);
       this.setMetric(dir, d.mbps, parts.join(' · '));
-      $(`[data-metric="${dir}"] [data-sub]`).title = d.stoppedEarly
-        ? 'Швидкість стабілізувалась — фазу завершено раніше. Значення — 90-й перцентиль, «сер.» — середня.'
-        : 'Значення — 90-й перцентиль швидкості, «сер.» — середня.';
+      $(`[data-metric="${dir}"] [data-sub]`).title = d.stoppedEarly ? t('metric.hint.early') : t('metric.hint');
     }
-    this.setMetric('stability', r.stability.score, `Оцінка ${r.stability.grade}`);
+    this.setMetric('stability', r.stability.score, t('metric.grade', { grade: r.stability.grade }));
     $('[data-metric="stability"]').dataset.grade = r.stability.grade;
 
     $('#summary-grade').textContent = r.stability.grade;
     $('#summary-grade').dataset.grade = r.stability.grade;
-    $('#sum-loaded-dl').textContent = `${formatMs(r.download.loadedLatency.median)} мс`;
-    $('#sum-loaded-ul').textContent = `${formatMs(r.upload.loadedLatency.median)} мс`;
-    $('#sum-bloat').textContent = `+${formatMs(r.bufferbloat.delta)} мс · ${r.bufferbloat.grade}`;
+    $('#sum-loaded-dl').textContent = `${formatMs(r.download.loadedLatency.median)} ${t('unit.ms')}`;
+    $('#sum-loaded-ul').textContent = `${formatMs(r.upload.loadedLatency.median)} ${t('unit.ms')}`;
+    $('#sum-bloat').textContent = `+${formatMs(r.bufferbloat.delta)} ${t('unit.ms')} · ${r.bufferbloat.grade}`;
     $('#sum-bytes').textContent = formatBytes(r.download.bytes + r.upload.bytes);
 
-    const labels = {
-      streaming4k: 'Стрімінг 4K',
-      videoCalls: 'Відеодзвінки',
-      gaming: 'Онлайн-ігри',
-      browsing: 'Веб-серфінг',
-    };
+    const labels = Object.fromEntries(Object.keys(r.useCases).map((k) => [k, t(`usecase.${k}`)]));
     $('#usecases').replaceChildren(
       ...Object.entries(r.useCases).map(([k, ok]) => {
         const li = document.createElement('li');
         li.className = ok ? 'ok' : 'bad';
         li.innerHTML = `<span aria-hidden="true">${ok ? '✓' : '✕'}</span> ${labels[k]}`;
-        li.setAttribute('aria-label', `${labels[k]}: ${ok ? 'підходить' : 'не підходить'}`);
+        li.setAttribute('aria-label', t(ok ? 'usecase.yes' : 'usecase.no', { name: labels[k] }));
         return li;
       }),
     );
@@ -341,7 +336,7 @@ export class UIController {
   showServer(server, meta, latency) {
     const loc = meta?.city ? `${meta.city}${meta.colo ? ` (${meta.colo})` : ''}` : (meta?.colo ?? '');
     this.el.serverName.textContent =
-      [server.name, loc].filter(Boolean).join(' · ') + (latency ? ` · ${formatMs(latency)} мс` : '');
+      [server.name, loc].filter(Boolean).join(' · ') + (latency ? ` · ${formatMs(latency)} ${t('unit.ms')}` : '');
     this.el.serverIsp.textContent = meta?.isp ?? '—';
     this.el.serverIp.textContent = meta?.ip ?? '—';
   }
@@ -366,18 +361,16 @@ export class UIController {
    */
   renderHistory(entries, { onDelete = undefined, filtered = false } = {}) {
     this.el.historyEmpty.hidden = entries.length > 0;
-    this.el.historyEmpty.textContent = filtered
-      ? 'За цей період тестів немає.'
-      : 'Ще немає жодного тесту. Натисніть «Старт».';
+    this.el.historyEmpty.textContent = filtered ? t('history.emptyFiltered') : t('history.empty');
     this.el.historyBody.replaceChildren(
       ...entries.map((e) => {
         const tr = document.createElement('tr');
         const cells = [
-          new Date(e.timestamp).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' }),
+          new Date(e.timestamp).toLocaleString(getLocale(), { dateStyle: 'short', timeStyle: 'short' }),
           formatMbps(e.download?.mbps),
           formatMbps(e.upload?.mbps),
-          `${formatMs(e.ping?.median)} мс`,
-          `${formatMs(e.ping?.jitter)} мс`,
+          `${formatMs(e.ping?.median)} ${t('unit.ms')}`,
+          `${formatMs(e.ping?.jitter)} ${t('unit.ms')}`,
         ];
         cells.forEach((c, i) => {
           const td = document.createElement('td');
@@ -391,8 +384,9 @@ export class UIController {
         const del = document.createElement('button');
         del.className = 'icon-btn icon-btn--sm';
         del.type = 'button';
-        del.title = 'Видалити запис';
-        del.innerHTML = '<span aria-hidden="true">🗑</span><span class="sr-only">Видалити</span>';
+        del.title = t('history.delete');
+        del.innerHTML = '<span aria-hidden="true">🗑</span><span class="sr-only"></span>';
+        del.querySelector('.sr-only').textContent = t('history.delete');
         del.addEventListener('click', () => onDelete?.(e.id));
         actionTd.append(del);
         tr.append(gradeTd, actionTd);
@@ -407,11 +401,11 @@ export class UIController {
     const avg = (fn) => entries.reduce((s, e) => s + (fn(e) || 0), 0) / entries.length;
     const best = Math.max(...entries.map((e) => e.download?.mbps || 0));
     const stats = [
-      ['Тестів', entries.length],
-      ['Сер. ↓', `${formatMbps(avg((e) => e.download?.mbps))} Мбіт/с`],
-      ['Сер. ↑', `${formatMbps(avg((e) => e.upload?.mbps))} Мбіт/с`],
-      ['Сер. пінг', `${formatMs(avg((e) => e.ping?.median))} мс`],
-      ['Рекорд ↓', `${formatMbps(best)} Мбіт/с`],
+      [t('history.stat.count'), entries.length],
+      [t('history.stat.avgDown'), `${formatMbps(avg((e) => e.download?.mbps))} ${t('unit.mbps')}`],
+      [t('history.stat.avgUp'), `${formatMbps(avg((e) => e.upload?.mbps))} ${t('unit.mbps')}`],
+      [t('history.stat.avgPing'), `${formatMs(avg((e) => e.ping?.median))} ${t('unit.ms')}`],
+      [t('history.stat.best'), `${formatMbps(best)} ${t('unit.mbps')}`],
     ];
     this.el.historyStats.replaceChildren(
       ...stats.map(([k, v]) => {
@@ -471,16 +465,16 @@ export class UIController {
   /** @param {import('../core/share.js').SharedResult} d */
   showShared(d) {
     document.body.classList.add('is-shared');
-    const when = new Date(d.t).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' });
+    const when = new Date(d.t).toLocaleString(getLocale(), { dateStyle: 'short', timeStyle: 'short' });
     $('#shared-meta').textContent = ` (${[when, d.n].filter(Boolean).join(' · ')})`;
     $('#shared-banner').hidden = false;
-    const note = 'з посилання';
+    const note = t('metric.fromLink');
     this.setMetric('download', d.d, note);
     this.setMetric('upload', d.u, note);
     this.setMetric('ping', d.p, note);
     this.setMetric('jitter', d.j, note);
     this.setMetric('loss', d.l, note);
-    this.setMetric('stability', d.s, `Оцінка ${d.g}`);
+    this.setMetric('stability', d.s, t('metric.grade', { grade: d.g }));
     $('[data-metric="stability"]').dataset.grade = d.g;
   }
 

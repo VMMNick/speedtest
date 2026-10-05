@@ -14,6 +14,8 @@ export default defineConfig({
 
   use: {
     baseURL: `http://localhost:${PORT}`,
+    // Українська за замовчуванням (тексти в тестах — українською); англійську перевіряє i18n.spec.js
+    locale: 'uk-UA',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     // Дозволяє використати вже встановлений Chromium (напр. у контейнері)

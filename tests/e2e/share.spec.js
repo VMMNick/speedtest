@@ -12,7 +12,7 @@ test('посилання на результат: копіюється і від
   expect(link).toMatch(/#r=[A-Za-z0-9_-]+$/);
 
   // «Друг» відкриває посилання в чистому браузері
-  const friend = await context.browser().newContext();
+  const friend = await context.browser().newContext({ locale: 'uk-UA' });
   const page = await friend.newPage();
   await page.route(/speed\.cloudflare\.com|fonts\./, (r) => r.abort());
   await page.goto(link);

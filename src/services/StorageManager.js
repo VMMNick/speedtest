@@ -10,8 +10,20 @@ const STORE = 'history';
 const LS_HISTORY = 'speedtest:history';
 const LS_SETTINGS = 'speedtest:settings';
 
-/** planMbps — тариф провайдера (Мбіт/с), null — не задано */
-const DEFAULT_SETTINGS = { theme: 'system', sound: true, planMbps: null };
+/** Заголовки CSV за замовчуванням (застосунок передає локалізовані) */
+const DEFAULT_CSV_HEADER = [
+  'Дата',
+  'Сервер',
+  'Пінг, мс',
+  'Джиттер, мс',
+  'Втрати, %',
+  'Download, Мбіт/с',
+  'Upload, Мбіт/с',
+  'Стабільність',
+];
+
+/** planMbps — тариф провайдера (Мбіт/с); lang — мова інтерфейсу (null — за браузером) */
+const DEFAULT_SETTINGS = { theme: 'system', sound: true, planMbps: null, lang: null };
 
 const promisify = (req) =>
   new Promise((resolve, reject) => {
@@ -151,18 +163,12 @@ export class StorageManager {
     return next;
   }
 
-  /** Експорт історії у CSV. */
-  static toCSV(entries) {
-    const head = [
-      'Дата',
-      'Сервер',
-      'Пінг, мс',
-      'Джиттер, мс',
-      'Втрати, %',
-      'Download, Мбіт/с',
-      'Upload, Мбіт/с',
-      'Стабільність',
-    ];
+  /**
+   * Експорт історії у CSV.
+   * @param {import('../core/types.js').TestResult[]} entries
+   * @param {string[]} [head] заголовки колонок (локалізовані)
+   */
+  static toCSV(entries, head = DEFAULT_CSV_HEADER) {
     const rows = entries.map((e) => [
       new Date(e.timestamp).toISOString(),
       e.server?.name ?? '',

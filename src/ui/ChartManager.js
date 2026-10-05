@@ -15,6 +15,8 @@ import {
   Legend,
 } from 'chart.js';
 
+import { t, getLocale } from '../i18n/index.js';
+
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip, Legend);
 
 const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -56,7 +58,7 @@ export class ChartManager {
       plugins: {
         legend: { labels: { color: p.text, font: { family: p.font }, usePointStyle: true, boxHeight: 6 } },
         tooltip: {
-          callbacks: { label: (c) => `${c.dataset.label}: ${mbpsFmt(c.parsed.y)} Мбіт/с` },
+          callbacks: { label: (c) => `${c.dataset.label}: ${mbpsFmt(c.parsed.y)} ${t('unit.mbps')}` },
         },
       },
       scales: {
@@ -65,7 +67,7 @@ export class ChartManager {
           beginAtZero: true,
           grid: { color: p.grid },
           ticks: { color: p.text, font: { family: p.font } },
-          title: { display: true, text: 'Мбіт/с', color: p.text },
+          title: { display: true, text: t('unit.mbps'), color: p.text },
         },
       },
     };
@@ -95,15 +97,17 @@ export class ChartManager {
       type: 'linear',
       min: 0,
       suggestedMax: 10,
-      title: { display: true, text: 'секунди', color: p.text },
+      title: { display: true, text: t('chart.seconds'), color: p.text },
       ticks: { ...opts.scales.x.ticks, callback: (v) => `${v}s` },
     };
-    opts.plugins.tooltip.callbacks.title = (items) => `${items[0]?.parsed.x.toFixed(1)} с`;
+    opts.plugins.tooltip.callbacks.title = (items) => `${items[0]?.parsed.x.toFixed(1)} ${t('unit.s')}`;
     // Дані приходять кожні 200 мс — анімація Chart.js тут лише заважає (і ламає resize)
     opts.animation = false;
     this.live = new Chart(canvas, {
       type: 'line',
-      data: { datasets: [this._dataset('Завантаження', p.download), this._dataset('Вивантаження', p.upload)] },
+      data: {
+        datasets: [this._dataset(t('metric.download'), p.download), this._dataset(t('metric.upload'), p.upload)],
+      },
       options: opts,
     });
   }
@@ -128,17 +132,17 @@ export class ChartManager {
     const p = palette();
     const ordered = [...entries].reverse(); // від старих до нових
     const labels = ordered.map((e) =>
-      new Date(e.timestamp).toLocaleString('uk-UA', {
+      new Date(e.timestamp).toLocaleString(getLocale(), {
         day: '2-digit',
         month: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
       }),
     );
-    const dl = this._dataset('Завантаження', p.download);
+    const dl = this._dataset(t('metric.download'), p.download);
     dl.data = ordered.map((e) => e.download?.mbps ?? 0);
     dl.pointRadius = 3;
-    const ul = this._dataset('Вивантаження', p.upload);
+    const ul = this._dataset(t('metric.upload'), p.upload);
     ul.data = ordered.map((e) => e.upload?.mbps ?? 0);
     ul.pointRadius = 3;
 
@@ -148,6 +152,19 @@ export class ChartManager {
       data: { labels, datasets: [dl, ul] },
       options: this._baseOptions(p),
     });
+  }
+
+  /** Перекласти підписи графіків після зміни мови (дані лишаються). */
+  updateLanguage() {
+    for (const chart of [this.live, this.history]) {
+      if (!chart) continue;
+      const [dl, ul] = chart.data.datasets;
+      dl.label = t('metric.download');
+      ul.label = t('metric.upload');
+      chart.options.scales.y.title.text = t('unit.mbps');
+      if (chart === this.live) chart.options.scales.x.title.text = t('chart.seconds');
+      chart.update('none');
+    }
   }
 
   /** Перефарбувати графіки після зміни теми. */

@@ -187,7 +187,7 @@ export class NetworkEngine {
       });
       if (intervalMs) await sleep(intervalMs);
     }
-    if (!rtts.length) throw new Error('Сервер недоступний: жоден пінг не повернувся');
+    if (!rtts.length) throw engineError('UNREACHABLE', 'Сервер недоступний: жоден пінг не повернувся');
     return M.summarizeLatency(rtts, count);
   }
 
@@ -333,8 +333,10 @@ export class NetworkEngine {
     await latencyLoop;
     this._checkAbort();
     if (totalBytes === 0) {
-      throw new Error(
+      throw engineError(
+        'TRANSFER_FAILED',
         `${phase === 'download' ? 'Завантаження' : 'Вивантаження'} не вдалося: ${lastError?.message ?? 'немає даних'}`,
+        { phase, detail: lastError?.message ?? null },
       );
     }
 
@@ -405,6 +407,17 @@ function downsample(points, max) {
   if (points.length <= max) return points;
   const step = points.length / max;
   return Array.from({ length: max }, (_, i) => points[Math.floor(i * step)]);
+}
+
+/**
+ * Помилка рушія з машинним кодом — UI перекладає її за кодом,
+ * а message (українською) лишається для логів і тестів.
+ * @param {'UNREACHABLE' | 'TRANSFER_FAILED'} code
+ * @param {string} message
+ * @param {Record<string, unknown>} [details]
+ */
+export function engineError(code, message, details = {}) {
+  return Object.assign(new Error(message), { code, details });
 }
 
 /** RTT мінус час обробки на сервері; якщо результат неправдоподібний — сирий RTT. */

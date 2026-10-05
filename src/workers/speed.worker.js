@@ -34,7 +34,7 @@ self.addEventListener('message', async ({ data }) => {
     if (err?.name === 'AbortError' || current.aborted) {
       self.postMessage({ type: 'aborted' });
     } else {
-      self.postMessage({ type: 'error', message: err?.message || String(err) });
+      self.postMessage({ type: 'error', message: err?.message || String(err), code: err?.code, details: err?.details });
     }
   } finally {
     if (engine === current) engine = null;

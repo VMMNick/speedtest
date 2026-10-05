@@ -4,6 +4,7 @@
  */
 import { formatMbps, formatMs, valueToFraction } from './UIController.js';
 import { CONFIG } from '../core/config.js';
+import { t, getLocale } from '../i18n/index.js';
 
 const W = 1200;
 const H = 630;
@@ -70,15 +71,15 @@ export async function renderShareCard(data, { site = location.host + location.pa
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = COLORS.text;
   ctx.font = `700 34px ${SANS}`;
-  ctx.fillText('Спід', 64, 92);
-  const w1 = ctx.measureText('Спід').width;
+  ctx.fillText(t('brand.a'), 64, 92);
+  const w1 = ctx.measureText(t('brand.a')).width;
   ctx.fillStyle = COLORS.download;
-  ctx.fillText('тест', 64 + w1, 92);
+  ctx.fillText(t('brand.b'), 64 + w1, 92);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = COLORS.muted;
   ctx.font = `500 22px ${SANS}`;
-  const date = new Date(data.t).toLocaleString('uk-UA', { dateStyle: 'medium', timeStyle: 'short' });
+  const date = new Date(data.t).toLocaleString(getLocale(), { dateStyle: 'medium', timeStyle: 'short' });
   ctx.fillText([date, data.n].filter(Boolean).join(' · '), W - 64, 90);
   ctx.textAlign = 'left';
 
@@ -92,18 +93,18 @@ export async function renderShareCard(data, { site = location.host + location.pa
     ctx.fillText(formatMbps(value), x - 6, 320);
     ctx.fillStyle = COLORS.muted;
     ctx.font = `500 26px ${SANS}`;
-    ctx.fillText('Мбіт/с', x, 362);
+    ctx.fillText(t('unit.mbps'), x, 362);
   };
-  big(64, '↓ Завантаження', COLORS.download, data.d);
-  big(560, '↑ Вивантаження', COLORS.upload, data.u);
+  big(64, `↓ ${t('metric.download')}`, COLORS.download, data.d);
+  big(560, `↑ ${t('metric.upload')}`, COLORS.upload, data.u);
 
   // Нижній ряд
   const gradeColor = data.g <= 'B' ? COLORS.good : data.g === 'C' ? COLORS.warn : COLORS.bad;
   const cells = [
-    ['Пінг', `${formatMs(data.p)} мс`, COLORS.ping],
-    ['Джиттер', `${formatMs(data.j)} мс`, COLORS.ping],
-    ['Втрати', `${data.l.toFixed(1)} %`, COLORS.text],
-    ['Стабільність', `${data.s} · ${data.g}`, gradeColor],
+    [t('metric.ping'), `${formatMs(data.p)} ${t('unit.ms')}`, COLORS.ping],
+    [t('metric.jitter'), `${formatMs(data.j)} ${t('unit.ms')}`, COLORS.ping],
+    [t('metric.loss'), `${data.l.toFixed(1)} %`, COLORS.text],
+    [t('metric.stability'), `${data.s} · ${data.g}`, gradeColor],
   ];
   const cw = (W - 128 - 3 * 20) / 4;
   cells.forEach(([label, value, color], i) => {
@@ -122,7 +123,7 @@ export async function renderShareCard(data, { site = location.host + location.pa
   // Підвал
   ctx.fillStyle = COLORS.muted;
   ctx.font = `500 20px ${SANS}`;
-  ctx.fillText(`Перевір свій інтернет: ${site}`, 64, 584);
+  ctx.fillText(t('card.check', { site }), 64, 584);
 
   return canvas;
 }

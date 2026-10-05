@@ -329,3 +329,9 @@ button {
   color: var(--color-bg); /* контрастно в обох темах */
   font-weight: 600;
 }
+
+/* Перемикач мови: текстова «іконка» UK/EN */
+.lang-btn {
+  font: 700 12px var(--font-mono);
+  letter-spacing: 0.04em;
+}

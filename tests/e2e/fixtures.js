@@ -118,7 +118,7 @@ export const test = base.extend({
  * @param {import('@playwright/test').Page} page
  */
 export async function runFullTest(page) {
-  await page.getByRole('button', { name: /старт|ще раз/i }).click();
+  await page.getByRole('button', { name: /^(старт|ще раз|go|again)$/i }).click();
   await expect(page.locator('#summary')).toBeVisible({ timeout: 30_000 });
 }
 

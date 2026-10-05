@@ -15,9 +15,10 @@ import { StorageManager } from './services/StorageManager.js';
 import { LIGHT_CONFIG, detectLightMode, mergeDeep } from './core/config.js';
 import { compareResults, filterByPeriod } from './core/insights.js';
 import { parseShareHash, shareUrl } from './core/share.js';
+import { t, setLang, getLang, detectLang, applyDom } from './i18n/index.js';
 import { ServerSelector } from './services/ServerSelector.js';
 
-const PHASE_NAMES = { ping: 'Пінг', download: 'Завантаження', upload: 'Вивантаження' };
+const phaseName = (phase) => t(`phase.${phase}`);
 
 const ui = new UIController();
 
@@ -60,6 +61,8 @@ theme.addEventListener('change', () => charts?.updateTheme());
 let worker = null;
 let selected = null; // { server, latency }
 let running = false;
+/** Метадані з'єднання (місто, провайдер, IP) */
+let serverMeta = null;
 /** Пінги поточного тесту — для спарклайна */
 let pingLive = [];
 
@@ -71,6 +74,7 @@ const lightMode = () => detectLightMode(connection);
 const showModeNote = () => (document.getElementById('mode-note').hidden = !lightMode());
 
 async function init() {
+  applyLanguage(settings.lang ?? detectLang(navigator.languages));
   ui.setSound(settings.sound);
   showModeNote();
   connection?.addEventListener?.('change', showModeNote);
@@ -90,17 +94,22 @@ async function init() {
 }
 
 async function detectServer() {
-  ui.el.serverName.textContent = 'Визначаю…';
+  ui.el.serverName.textContent = t('server.detecting');
   selected = await selector.selectBest();
-  const meta = await selector.fetchMeta(selected.server);
-  ui.showServer(selected.server, meta, selected.latency);
-  if (!selected.reachable) ui.toast('Сервер вимірювань недоступний. Перевірте з’єднання.', 'error');
+  serverMeta = await selector.fetchMeta(selected.server);
+  ui.showServer(selected.server, serverMeta, selected.latency);
+  if (!selected.reachable) ui.toast(t('server.unreachable'), 'error');
 }
 
 function bindEvents() {
   ui.el.start.addEventListener('click', startTest);
   ui.el.stop.addEventListener('click', stopTest);
   document.getElementById('btn-theme').addEventListener('click', () => theme.toggle());
+  document.getElementById('btn-lang').addEventListener('click', () => {
+    const next = getLang() === 'uk' ? 'en' : 'uk';
+    settings = storage.saveSettings({ lang: next });
+    applyLanguage(next);
+  });
   document.getElementById('btn-sound').addEventListener('click', () => {
     settings = storage.saveSettings({ sound: !settings.sound });
     ui.setSound(settings.sound);
@@ -112,20 +121,20 @@ function bindEvents() {
   const resetClear = () => {
     clearTimeout(confirmTimer);
     clearBtn.classList.remove('is-confirm');
-    clearBtn.textContent = 'Очистити історію';
+    clearBtn.textContent = t('history.clear');
   };
   clearBtn.addEventListener('click', async () => {
     if (!(await storage.getHistory()).length) return;
     if (!clearBtn.classList.contains('is-confirm')) {
       clearBtn.classList.add('is-confirm');
-      clearBtn.textContent = 'Точно очистити? Натисніть ще раз';
+      clearBtn.textContent = t('history.clearConfirm');
       confirmTimer = window.setTimeout(resetClear, 4000);
       return;
     }
     resetClear();
     await storage.clearHistory();
     await refreshHistory();
-    ui.toast('Історію очищено');
+    ui.toast(t('history.cleared'));
   });
   ui.el.modal.addEventListener('close', resetClear);
 
@@ -150,9 +159,9 @@ function bindEvents() {
     if (e.key === 'Escape' && running) stopTest();
   });
 
-  window.addEventListener('online', () => ui.toast('З’єднання відновлено', 'success'));
+  window.addEventListener('online', () => ui.toast(t('toast.online'), 'success'));
   window.addEventListener('offline', () => {
-    ui.toast('Немає підключення до інтернету', 'error');
+    ui.toast(t('toast.offline'), 'error');
     if (running) stopTest();
   });
 }
@@ -166,7 +175,7 @@ function getWorker() {
     worker.addEventListener('error', (e) => {
       console.error(e);
       finish();
-      ui.toast('Помилка фонового воркера', 'error');
+      ui.toast(t('toast.workerError'), 'error');
       worker?.terminate();
       worker = null;
     });
@@ -177,7 +186,7 @@ function getWorker() {
 async function startTest() {
   if (running) return;
   if (!navigator.onLine) {
-    ui.toast('Немає підключення до інтернету', 'error');
+    ui.toast(t('toast.offline'), 'error');
     return;
   }
   running = true;
@@ -210,7 +219,7 @@ function handleMessage(msg) {
   switch (msg.type) {
     case 'phase':
       ui.setPhase(msg.phase);
-      ui.announce(`${PHASE_NAMES[msg.phase]}…`);
+      ui.announce(t('a11y.phase', { phase: phaseName(msg.phase) }));
       ['ping', 'download', 'upload'].forEach((m) => ui.setMetricLive(m, m === msg.phase));
       ui.setMetricLive('jitter', msg.phase === 'ping');
       break;
@@ -235,8 +244,8 @@ function handleMessage(msg) {
       ui.setMetricLive(msg.phase, false);
       ui.announce(
         msg.phase === 'ping'
-          ? `Пінг ${formatMs(msg.data.median)} мс, джиттер ${formatMs(msg.data.jitter)} мс`
-          : `${PHASE_NAMES[msg.phase]}: ${formatMbps(msg.data.mbps)} Мбіт/с`,
+          ? t('a11y.pingResult', { ping: formatMs(msg.data.median), jitter: formatMs(msg.data.jitter) })
+          : t('a11y.speedResult', { phase: phaseName(msg.phase), value: formatMbps(msg.data.mbps) }),
       );
       if (msg.phase === 'ping') {
         ui.setMetricLive('jitter', false);
@@ -254,12 +263,12 @@ function handleMessage(msg) {
       break;
 
     case 'aborted':
-      ui.toast('Тест зупинено');
+      ui.toast(t('toast.stopped'));
       finish();
       break;
 
     case 'error':
-      ui.toast(`Помилка: ${msg.message}`, 'error', 7000);
+      ui.toast(t('toast.error', { message: errorText(msg) }), 'error', 7000);
       finish();
       break;
   }
@@ -267,12 +276,15 @@ function handleMessage(msg) {
 
 /** Останній результат — щоб перерахувати частку від тарифу при зміні поля */
 let lastResult = null;
+/** Порівняння з попереднім — для повторного показу після зміни мови */
+let lastDeltas = null;
+let hasRun = false;
 
 async function onDone(results) {
   lastResult = results;
   results.server = { ...results.server, latency: selected?.latency ?? null };
   ui.showResults(results);
-  ui.announce(`Тест завершено. Оцінка стабільності ${results.stability.grade}, ${results.stability.score} зі 100`);
+  ui.announce(t('a11y.done', { grade: results.stability.grade, score: results.stability.score }));
   ui.setPhase('done');
   ui.setPhaseProgress(1);
   ui.setGaugeValue(results.download.mbps);
@@ -283,7 +295,8 @@ async function onDone(results) {
   try {
     // Порівнюємо з попереднім тестом ДО збереження нового
     const [prev] = await storage.getHistory();
-    ui.showDeltas(compareResults(prev, results));
+    lastDeltas = compareResults(prev, results);
+    ui.showDeltas(lastDeltas);
     await storage.addResult(results);
   } catch (e) {
     console.warn('Не вдалося зберегти результат', e);
@@ -293,7 +306,8 @@ async function onDone(results) {
 function finish() {
   running = false;
   ui.setRunning(false);
-  ui.setStartLabel('Ще раз');
+  hasRun = true;
+  ui.setStartLabel(t('btn.again'));
   if (document.getElementById('gauge').dataset.phase !== 'done') {
     ui.setPhase('idle');
     ui.setGaugeValue(0);
@@ -328,8 +342,10 @@ async function openHistory() {
 
 async function exportCSV() {
   const entries = await visibleHistory();
-  if (!entries.length) return ui.toast('Немає записів для експорту');
-  const blob = new Blob(['\uFEFF' + StorageManager.toCSV(entries)], { type: 'text/csv;charset=utf-8' });
+  if (!entries.length) return ui.toast(t('history.nothingToExport'));
+  const blob = new Blob(['\uFEFF' + StorageManager.toCSV(entries, t('csv.header').split('|'))], {
+    type: 'text/csv;charset=utf-8',
+  });
   const a = Object.assign(document.createElement('a'), {
     href: URL.createObjectURL(blob),
     download: `speedtest-history-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -377,7 +393,7 @@ function showSharedFromUrl() {
   const shared = parseShareHash(location.hash);
   if (shared === undefined) return;
   if (shared === null) {
-    ui.toast('Посилання на результат пошкоджене', 'error');
+    ui.toast(t('share.broken'), 'error');
     return;
   }
   ui.showShared(shared);
@@ -413,13 +429,17 @@ function bindShare() {
   shareBtn.addEventListener('click', async () => {
     if (!lastResult) return;
     const url = shareUrl(lastResult, location.href);
-    const text = `Мій інтернет: ↓ ${formatMbps(lastResult.download.mbps)} / ↑ ${formatMbps(lastResult.upload.mbps)} Мбіт/с, пінг ${formatMs(lastResult.ping.median)} мс`;
+    const text = t('share.text', {
+      down: formatMbps(lastResult.download.mbps),
+      up: formatMbps(lastResult.upload.mbps),
+      ping: formatMs(lastResult.ping.median),
+    });
     try {
       const file = new File([await makeImage()], 'speedtest.png', { type: 'image/png' });
-      const withFile = { title: 'Спідтест', text, url, files: [file] };
-      await navigator.share(navigator.canShare?.(withFile) ? withFile : { title: 'Спідтест', text, url });
+      const withFile = { title: t('brand.full'), text, url, files: [file] };
+      await navigator.share(navigator.canShare?.(withFile) ? withFile : { title: t('brand.full'), text, url });
     } catch (e) {
-      if (e?.name !== 'AbortError') ui.toast('Не вдалося поділитися', 'error');
+      if (e?.name !== 'AbortError') ui.toast(t('share.failed'), 'error');
     }
   });
 
@@ -427,9 +447,9 @@ function bindShare() {
     if (!lastResult) return;
     try {
       await navigator.clipboard.writeText(shareUrl(lastResult, location.href));
-      ui.toast('Посилання скопійовано', 'success');
+      ui.toast(t('share.copied'), 'success');
     } catch {
-      ui.toast('Не вдалося скопіювати посилання', 'error');
+      ui.toast(t('share.copyFailed'), 'error');
     }
   });
 
@@ -466,8 +486,8 @@ function registerServiceWorker() {
         const next = reg.installing;
         next?.addEventListener('statechange', () => {
           if (next.state === 'installed' && navigator.serviceWorker.controller) {
-            ui.toast('Доступна нова версія', 'info', 0, {
-              label: 'Оновити',
+            ui.toast(t('toast.update'), 'info', 0, {
+              label: t('toast.updateAction'),
               onClick: () => {
                 updateRequested = true;
                 next.postMessage({ type: 'SKIP_WAITING' });
@@ -478,6 +498,59 @@ function registerServiceWorker() {
       });
     })
     .catch((e) => console.warn('Service worker не зареєстровано', e));
+}
+
+// ───────────── Мова ─────────────
+
+/** Текст помилки рушія: за кодом — перекладений, інакше — як є */
+function errorText(msg) {
+  if (msg.code === 'UNREACHABLE') return t('error.unreachable');
+  if (msg.code === 'TRANSFER_FAILED') {
+    return t('error.transfer', {
+      phase: phaseName(msg.details?.phase),
+      detail: msg.details?.detail ?? t('error.noData'),
+    });
+  }
+  return msg.message;
+}
+
+/** Футер із посиланням: текст перекладається, посилання лишається елементом */
+function renderFooter() {
+  const link = Object.assign(document.createElement('a'), {
+    href: 'https://speed.cloudflare.com',
+    target: '_blank',
+    rel: 'noopener',
+    textContent: 'Cloudflare',
+  });
+  const [before, after] = t('footer.text').split('{link}');
+  document.getElementById('footer-text').replaceChildren(before, link, after ?? '');
+}
+
+/** Застосовує мову до всього інтерфейсу, включно з уже показаними результатами */
+function applyLanguage(lang) {
+  setLang(lang);
+  document.documentElement.lang = getLang();
+  document.title = t('meta.title');
+  document.querySelector('meta[name="description"]')?.setAttribute('content', t('meta.description'));
+  applyDom(document);
+  renderFooter();
+  ui.setStartLabel(t(hasRun ? 'btn.again' : 'btn.start'));
+  ui.relabel();
+  if (lastResult && !running) {
+    ui.showResults(lastResult);
+    ui.showPlan(lastResult.download.mbps, settings.planMbps);
+    ui.showDeltas(lastDeltas);
+  }
+  if (selected) detectServerLabel();
+  charts?.updateLanguage();
+  if (ui.el.modal.open) refreshHistory();
+  const clearBtn = document.getElementById('btn-clear');
+  if (!clearBtn.classList.contains('is-confirm')) clearBtn.textContent = t('history.clear');
+}
+
+/** Оновлює підпис сервера без повторного пінгу */
+function detectServerLabel() {
+  ui.showServer(selected.server, serverMeta, selected.latency);
 }
 
 init();

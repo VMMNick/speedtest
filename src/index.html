@@ -34,68 +34,98 @@
     <link rel="stylesheet" href="./styles/history.css" />
   </head>
   <body>
-    <a class="skip-link" href="#main">Перейти до вмісту</a>
+    <a class="skip-link" href="#main" data-i18n="nav.skip">Перейти до вмісту</a>
 
     <header class="topbar">
       <div class="brand">
         <span class="icon icon--lg icon--speedometer" aria-hidden="true"></span>
-        <span class="brand__name">Спід<span>тест</span></span>
+        <span class="brand__name"><span data-i18n="brand.a">Спід</span><span data-i18n="brand.b">тест</span></span>
       </div>
-      <nav class="topbar__actions" aria-label="Дії">
-        <button class="icon-btn" id="btn-sound" type="button" aria-pressed="true" title="Звук завершення">
+      <nav class="topbar__actions" aria-label="Дії" data-i18n-attr="aria-label:nav.actions">
+        <button
+          class="icon-btn lang-btn"
+          id="btn-lang"
+          type="button"
+          title="Мова: English"
+          data-i18n-attr="title:nav.lang"
+        >
+          <span aria-hidden="true" data-i18n="nav.langShort">EN</span>
+          <span class="sr-only" data-i18n="nav.lang">Мова: English</span>
+        </button>
+        <button
+          class="icon-btn"
+          id="btn-sound"
+          type="button"
+          aria-pressed="true"
+          title="Звук завершення"
+          data-i18n-attr="title:nav.sound"
+        >
           <span class="icon icon--sound" aria-hidden="true"></span>
-          <span class="sr-only">Звук завершення</span>
+          <span class="sr-only" data-i18n="nav.sound">Звук завершення</span>
         </button>
-        <button class="icon-btn" id="btn-history" type="button" title="Історія тестів">
+        <button
+          class="icon-btn"
+          id="btn-history"
+          type="button"
+          title="Історія тестів"
+          data-i18n-attr="title:nav.history"
+        >
           <span class="icon icon--history" aria-hidden="true"></span>
-          <span class="sr-only">Історія тестів</span>
+          <span class="sr-only" data-i18n="nav.history">Історія тестів</span>
         </button>
-        <button class="icon-btn" id="btn-theme" type="button" title="Змінити тему">
+        <button class="icon-btn" id="btn-theme" type="button" title="Змінити тему" data-i18n-attr="title:nav.theme">
           <span class="icon icon--theme" aria-hidden="true"></span>
-          <span class="sr-only">Змінити тему</span>
+          <span class="sr-only" data-i18n="nav.theme">Змінити тему</span>
         </button>
       </nav>
     </header>
 
     <section class="shared-banner card" id="shared-banner" hidden aria-live="polite">
       <p>
-        <strong>Результат, яким з вами поділились</strong>
-        <span id="shared-meta"></span>. Натисніть «Старт», щоб перевірити свій інтернет.
+        <strong data-i18n="shared.title">Результат, яким з вами поділились</strong>
+        <span id="shared-meta"></span
+        ><span data-i18n="shared.cta">. Натисніть «Старт», щоб перевірити свій інтернет.</span>
       </p>
-      <button class="icon-btn icon-btn--sm" type="button" id="btn-shared-close" title="Сховати">
-        <span aria-hidden="true">✕</span><span class="sr-only">Сховати</span>
+      <button
+        class="icon-btn icon-btn--sm"
+        type="button"
+        id="btn-shared-close"
+        title="Сховати"
+        data-i18n-attr="title:shared.hide"
+      >
+        <span aria-hidden="true">✕</span><span class="sr-only" data-i18n="shared.hide">Сховати</span>
       </button>
     </section>
 
     <main id="main" class="layout">
-      <section class="server-bar card" aria-label="Інформація про з'єднання">
+      <section class="server-bar card" aria-label="Інформація про з'єднання" data-i18n-attr="aria-label:server.section">
         <div class="server-bar__item">
           <span class="icon icon--pin" aria-hidden="true"></span>
           <div>
-            <div class="label">Сервер</div>
+            <div class="label" data-i18n="server.server">Сервер</div>
             <div class="value" id="server-name">Визначаю…</div>
           </div>
         </div>
         <div class="server-bar__item">
           <span class="icon icon--wifi" aria-hidden="true"></span>
           <div>
-            <div class="label">Провайдер</div>
+            <div class="label" data-i18n="server.isp">Провайдер</div>
             <div class="value" id="server-isp">—</div>
           </div>
         </div>
         <div class="server-bar__item">
           <span class="icon icon--globe" aria-hidden="true"></span>
           <div>
-            <div class="label">IP-адреса</div>
+            <div class="label" data-i18n="server.ip">IP-адреса</div>
             <div class="value mono" id="server-ip">—</div>
           </div>
         </div>
       </section>
 
-      <section class="gauge-panel card" aria-label="Датчик швидкості">
+      <section class="gauge-panel card" aria-label="Датчик швидкості" data-i18n-attr="aria-label:gauge.section">
         <div class="gauge" id="gauge" data-phase="idle">
           <svg class="gauge__svg" viewBox="0 0 300 300" role="img" aria-labelledby="gauge-title">
-            <title id="gauge-title">Поточна швидкість</title>
+            <title id="gauge-title" data-i18n="gauge.title">Поточна швидкість</title>
             <defs>
               <linearGradient id="gauge-grad-download" x1="0" y1="1" x2="1" y2="0">
                 <stop offset="0%" stop-color="var(--color-download-2)" />
@@ -131,41 +161,45 @@
           <div class="phase-progress__bar" id="phase-progress"></div>
         </div>
         <ol class="phase-steps" id="phase-steps">
-          <li data-step="ping">Пінг</li>
-          <li data-step="download">Завантаження</li>
-          <li data-step="upload">Вивантаження</li>
+          <li data-step="ping" data-i18n="phase.ping">Пінг</li>
+          <li data-step="download" data-i18n="phase.download">Завантаження</li>
+          <li data-step="upload" data-i18n="phase.upload">Вивантаження</li>
         </ol>
-        <p class="mode-note" id="mode-note" hidden>
+        <p class="mode-note" id="mode-note" hidden data-i18n="mode.light">
           Економний режим: коротший тест і менше трафіку (увімкнено збереження даних або повільна мережа)
         </p>
-        <button class="btn btn--ghost" id="btn-stop" type="button" hidden>Зупинити</button>
+        <button class="btn btn--ghost" id="btn-stop" type="button" hidden data-i18n="btn.stop">Зупинити</button>
       </section>
 
-      <section class="metrics" aria-label="Результати">
+      <section class="metrics" aria-label="Результати" data-i18n-attr="aria-label:metrics.section">
         <article class="metric card" data-metric="download">
           <header class="metric__head">
             <span class="icon icon--download" aria-hidden="true"></span>
-            Завантаження
+            <span data-i18n="metric.download">Завантаження</span>
           </header>
-          <div class="metric__value"><span class="mono" data-value>—</span><small>Мбіт/с</small></div>
+          <div class="metric__value">
+            <span class="mono" data-value>—</span><small data-i18n="unit.mbps">Мбіт/с</small>
+          </div>
           <div class="metric__sub" data-sub></div>
           <div class="metric__delta" data-delta hidden></div>
         </article>
         <article class="metric card" data-metric="upload">
           <header class="metric__head">
             <span class="icon icon--upload" aria-hidden="true"></span>
-            Вивантаження
+            <span data-i18n="metric.upload">Вивантаження</span>
           </header>
-          <div class="metric__value"><span class="mono" data-value>—</span><small>Мбіт/с</small></div>
+          <div class="metric__value">
+            <span class="mono" data-value>—</span><small data-i18n="unit.mbps">Мбіт/с</small>
+          </div>
           <div class="metric__sub" data-sub></div>
           <div class="metric__delta" data-delta hidden></div>
         </article>
         <article class="metric card" data-metric="ping">
           <header class="metric__head">
             <span class="icon icon--ping" aria-hidden="true"></span>
-            Пінг
+            <span data-i18n="metric.ping">Пінг</span>
           </header>
-          <div class="metric__value"><span class="mono" data-value>—</span><small>мс</small></div>
+          <div class="metric__value"><span class="mono" data-value>—</span><small data-i18n="unit.ms">мс</small></div>
           <div class="metric__sub" data-sub></div>
           <div class="metric__delta" data-delta hidden></div>
           <svg class="sparkline" data-spark viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
@@ -175,16 +209,16 @@
         <article class="metric card" data-metric="jitter">
           <header class="metric__head">
             <span class="icon icon--jitter" aria-hidden="true"></span>
-            Джиттер
+            <span data-i18n="metric.jitter">Джиттер</span>
           </header>
-          <div class="metric__value"><span class="mono" data-value>—</span><small>мс</small></div>
+          <div class="metric__value"><span class="mono" data-value>—</span><small data-i18n="unit.ms">мс</small></div>
           <div class="metric__sub" data-sub></div>
           <div class="metric__delta" data-delta hidden></div>
         </article>
         <article class="metric card" data-metric="loss">
           <header class="metric__head">
             <span class="icon icon--loss" aria-hidden="true"></span>
-            Втрати
+            <span data-i18n="metric.loss">Втрати</span>
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>%</small></div>
           <div class="metric__sub" data-sub></div>
@@ -192,53 +226,61 @@
         <article class="metric card" data-metric="stability">
           <header class="metric__head">
             <span class="icon icon--shield" aria-hidden="true"></span>
-            Стабільність
+            <span data-i18n="metric.stability">Стабільність</span>
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>/100</small></div>
           <div class="metric__sub" data-sub></div>
         </article>
       </section>
 
-      <section class="card chart-card" aria-label="Графік швидкості">
+      <section class="card chart-card" aria-label="Графік швидкості" data-i18n-attr="aria-label:chart.section">
         <header class="card__head">
-          <h2>Швидкість у реальному часі</h2>
+          <h2 data-i18n="chart.title">Швидкість у реальному часі</h2>
         </header>
         <div class="chart-wrap"><canvas id="live-chart"></canvas></div>
       </section>
 
-      <section class="card summary" id="summary" hidden aria-label="Підсумок">
+      <section
+        class="card summary"
+        id="summary"
+        hidden
+        aria-label="Підсумок"
+        data-i18n-attr="aria-label:summary.section"
+      >
         <header class="card__head">
-          <h2>Підсумок</h2>
+          <h2 data-i18n="summary.title">Підсумок</h2>
           <span class="grade" id="summary-grade">—</span>
         </header>
         <dl class="summary__grid">
           <div>
-            <dt>Пінг під навантаженням (↓)</dt>
+            <dt data-i18n="summary.loadedDown">Пінг під навантаженням (↓)</dt>
             <dd class="mono" id="sum-loaded-dl">—</dd>
           </div>
           <div>
-            <dt>Пінг під навантаженням (↑)</dt>
+            <dt data-i18n="summary.loadedUp">Пінг під навантаженням (↑)</dt>
             <dd class="mono" id="sum-loaded-ul">—</dd>
           </div>
           <div>
-            <dt>Bufferbloat</dt>
+            <dt data-i18n="summary.bufferbloat">Bufferbloat</dt>
             <dd class="mono" id="sum-bloat">—</dd>
           </div>
           <div>
-            <dt>Передано даних</dt>
+            <dt data-i18n="summary.bytes">Передано даних</dt>
             <dd class="mono" id="sum-bytes">—</dd>
           </div>
         </dl>
         <ul class="usecases" id="usecases"></ul>
 
-        <div class="share" role="group" aria-label="Поділитися результатом">
-          <button class="btn" type="button" id="btn-share" hidden>Поділитися…</button>
-          <button class="btn" type="button" id="btn-copy-link">Скопіювати посилання</button>
-          <button class="btn btn--ghost" type="button" id="btn-save-image">Зберегти картинку</button>
+        <div class="share" role="group" aria-label="Поділитися результатом" data-i18n-attr="aria-label:share.group">
+          <button class="btn" type="button" id="btn-share" hidden data-i18n="share.native">Поділитися…</button>
+          <button class="btn" type="button" id="btn-copy-link" data-i18n="share.copy">Скопіювати посилання</button>
+          <button class="btn btn--ghost" type="button" id="btn-save-image" data-i18n="share.image">
+            Зберегти картинку
+          </button>
         </div>
 
         <div class="plan">
-          <label class="plan__label" for="plan-input">Тариф провайдера</label>
+          <label class="plan__label" for="plan-input" data-i18n="plan.label">Тариф провайдера</label>
           <div class="plan__field">
             <input
               id="plan-input"
@@ -248,9 +290,10 @@
               max="100000"
               step="any"
               placeholder="напр. 500"
+              data-i18n-attr="placeholder:plan.placeholder"
               aria-describedby="plan-text"
             />
-            <span>Мбіт/с</span>
+            <span data-i18n="unit.mbps">Мбіт/с</span>
           </div>
           <div class="plan__result" id="plan-result" hidden>
             <div class="plan__bar" aria-hidden="true"><div class="plan__fill" id="plan-fill"></div></div>
@@ -261,23 +304,25 @@
     </main>
 
     <footer class="footer">
-      Вимірювання через <a href="https://speed.cloudflare.com" target="_blank" rel="noopener">Cloudflare</a>. Результати
-      залежать від браузера, Wi-Fi та навантаження мережі.
+      <p id="footer-text">
+        Вимірювання через <a href="https://speed.cloudflare.com" target="_blank" rel="noopener">Cloudflare</a>.
+        Результати залежать від браузера, Wi-Fi та навантаження мережі.
+      </p>
     </footer>
 
     <dialog class="modal" id="history-modal" aria-labelledby="history-title">
       <div class="modal__inner">
         <header class="modal__head">
-          <h2 id="history-title">Історія тестів</h2>
-          <label class="sr-only" for="history-period">Період</label>
+          <h2 id="history-title" data-i18n="history.title">Історія тестів</h2>
+          <label class="sr-only" for="history-period" data-i18n="history.period">Період</label>
           <select class="select" id="history-period">
-            <option value="all">Увесь час</option>
-            <option value="24h">24 години</option>
-            <option value="7d">7 днів</option>
-            <option value="30d">30 днів</option>
+            <option value="all" data-i18n="history.all">Увесь час</option>
+            <option value="24h" data-i18n="history.24h">24 години</option>
+            <option value="7d" data-i18n="history.7d">7 днів</option>
+            <option value="30d" data-i18n="history.30d">30 днів</option>
           </select>
-          <button class="icon-btn" type="button" data-close title="Закрити">
-            <span aria-hidden="true">✕</span><span class="sr-only">Закрити</span>
+          <button class="icon-btn" type="button" data-close title="Закрити" data-i18n-attr="title:history.close">
+            <span aria-hidden="true">✕</span><span class="sr-only" data-i18n="history.close">Закрити</span>
           </button>
         </header>
         <div class="history-stats" id="history-stats"></div>
@@ -286,13 +331,13 @@
           <table class="history-table">
             <thead>
               <tr>
-                <th scope="col">Дата</th>
-                <th scope="col">↓ Мбіт/с</th>
-                <th scope="col">↑ Мбіт/с</th>
-                <th scope="col">Пінг</th>
-                <th scope="col">Джиттер</th>
-                <th scope="col">Оцінка</th>
-                <th scope="col"><span class="sr-only">Дії</span></th>
+                <th scope="col" data-i18n="history.date">Дата</th>
+                <th scope="col">↓ <span data-i18n="unit.mbps">Мбіт/с</span></th>
+                <th scope="col">↑ <span data-i18n="unit.mbps">Мбіт/с</span></th>
+                <th scope="col" data-i18n="history.ping">Пінг</th>
+                <th scope="col" data-i18n="history.jitter">Джиттер</th>
+                <th scope="col" data-i18n="history.grade">Оцінка</th>
+                <th scope="col"><span class="sr-only" data-i18n="history.actions">Дії</span></th>
               </tr>
             </thead>
             <tbody id="history-body"></tbody>
@@ -300,8 +345,10 @@
           <p class="empty" id="history-empty" hidden>Ще немає жодного тесту. Натисніть «Старт».</p>
         </div>
         <footer class="modal__foot">
-          <button class="btn btn--ghost" type="button" id="btn-export">Експорт CSV</button>
-          <button class="btn btn--danger" type="button" id="btn-clear">Очистити історію</button>
+          <button class="btn btn--ghost" type="button" id="btn-export" data-i18n="history.export">Експорт CSV</button>
+          <button class="btn btn--danger" type="button" id="btn-clear" data-i18n="history.clear">
+            Очистити історію
+          </button>
         </footer>
       </div>
     </dialog>
