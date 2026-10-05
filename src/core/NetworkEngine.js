@@ -4,7 +4,7 @@
  * Не залежить від DOM: працює у Web Worker або в Node (тести).
  * Усі побічні ефекти (fetch, upload, таймер) можна підмінити через конструктор.
  */
-import { CONFIG } from './config.js';
+import { CONFIG, mergeDeep } from './config.js';
 import * as M from './MetricsCalculator.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -137,7 +137,9 @@ export class NetworkEngine {
       const res = await this.fetch(url, { cache: 'no-store', signal: c.signal });
       await res.arrayBuffer();
       const wall = this.now() - t0;
-      return this._resourceTiming(url) ?? wall;
+      // Запасний варіант: якщо Resource Timing недоступний, віднімаємо Server-Timing із заголовка
+      const serverMs = this._serverMs(M.parseServerTiming(res.headers?.get?.('server-timing')));
+      return this._resourceTiming(url) ?? subtractServer(wall, serverMs);
     } catch {
       return null;
     } finally {
@@ -156,7 +158,16 @@ export class NetworkEngine {
     const e = /** @type {PerformanceResourceTiming | undefined} */ (entries[entries.length - 1]);
     if (!e || !e.requestStart || !e.responseStart) return null;
     const rtt = e.responseStart - e.requestStart;
-    return rtt > 0 ? rtt : null;
+    if (rtt <= 0) return null;
+    /** @type {Record<string, number>} */
+    const timings = {};
+    for (const st of e.serverTiming ?? []) timings[st.name] = st.duration;
+    return subtractServer(rtt, this._serverMs(timings));
+  }
+
+  /** Сумарний час обробки на сервері за назвами з конфігурації сервера. */
+  _serverMs(timings) {
+    return (this.server.serverTimingNames ?? []).reduce((s, n) => s + (timings[n] || 0), 0);
   }
 
   async measurePing() {
@@ -219,7 +230,11 @@ export class NetworkEngine {
    */
   async _measureThroughput(phase, settings, transfer) {
     const start = this.now();
-    const deadline = start + settings.durationMs;
+    let deadline = start + settings.durationMs;
+    let stoppedEarly = false;
+    const early = this.cfg.earlyStop;
+    /** @type {Set<AbortController>} */
+    const inflight = new Set();
     const samples = [{ t: 0, bytes: 0 }];
     let totalBytes = 0;
     let streamsDone = false;
@@ -238,13 +253,27 @@ export class NetworkEngine {
         phase,
         value: mbps,
         t,
-        progress: Math.min(1, t / settings.durationMs),
+        progress: stoppedEarly ? 1 : Math.min(1, t / settings.durationMs),
       });
+      if (
+        early?.enabled &&
+        !stoppedEarly &&
+        t >= early.minDurationMs &&
+        M.isStable(samples, {
+          windowMs: this.cfg.liveWindowMs,
+          lookbackMs: early.lookbackMs,
+          tolerance: early.tolerance,
+        })
+      ) {
+        // Швидкість стабільна — далі вимірювати немає сенсу
+        stoppedEarly = true;
+        deadline = this.now();
+        if (settings.abortAtDeadline) inflight.forEach((c) => c.abort());
+      }
     };
     const ticker = setInterval(tick, this.cfg.sampleIntervalMs);
 
     // Дедлайн: download обриває запити одразу, upload дає їм завершитись (з запасом graceMs)
-    const inflight = new Set();
     const stopAt = settings.abortAtDeadline ? settings.durationMs : settings.durationMs + (settings.graceMs ?? 0);
     const killer = setTimeout(() => inflight.forEach((c) => c.abort()), stopAt);
 
@@ -309,7 +338,9 @@ export class NetworkEngine {
       );
     }
 
-    const mbps = M.throughput(samples, this.cfg.warmupMs);
+    const mbpsAvg = M.throughput(samples, this.cfg.warmupMs);
+    const mbpsP90 = M.throughputP90(samples, this.cfg.warmupMs, this.cfg.liveWindowMs);
+    const mbps = this.cfg.aggregate === 'mean' ? mbpsAvg : mbpsP90;
     // Миттєві швидкості між семплами — для графіків та оцінки стабільності
     const speeds = [];
     for (let i = 1; i < samples.length; i++) {
@@ -322,6 +353,9 @@ export class NetworkEngine {
 
     return {
       mbps,
+      mbpsAvg,
+      mbpsP90,
+      stoppedEarly,
       bytes: totalBytes,
       durationMs: samples[samples.length - 1].t,
       speeds,
@@ -373,10 +407,8 @@ function downsample(points, max) {
   return Array.from({ length: max }, (_, i) => points[Math.floor(i * step)]);
 }
 
-function mergeDeep(base, extra) {
-  const out = { ...base };
-  for (const [k, v] of Object.entries(extra || {})) {
-    out[k] = v && typeof v === 'object' && !Array.isArray(v) ? mergeDeep(base[k] || {}, v) : v;
-  }
-  return out;
+/** RTT мінус час обробки на сервері; якщо результат неправдоподібний — сирий RTT. */
+export function subtractServer(rtt, serverMs) {
+  const net = rtt - (serverMs || 0);
+  return net > 0 ? net : rtt;
 }

@@ -163,3 +163,51 @@ export function useCases({ download = 0, upload = 0, ping = 0, jitter: j = 0, lo
     browsing: download >= 2,
   };
 }
+
+/**
+ * 90-й перцентиль швидкості у ковзному вікні після розгону.
+ * Якщо точок замало (дуже короткий тест) — середня швидкість.
+ * @param {{ t: number, bytes: number }[]} samples
+ */
+export function throughputP90(samples, warmupMs = 0, windowMs = 1000) {
+  const points = speedSeries(samples, windowMs).filter((p) => p.t >= warmupMs + windowMs);
+  if (points.length < 3) return throughput(samples, warmupMs);
+  return percentile(
+    points.map((p) => p.mbps),
+    0.9,
+  );
+}
+
+/**
+ * Чи стабілізувалась швидкість: коефіцієнт варіації ковзної швидкості
+ * за останні lookbackMs не перевищує tolerance.
+ * @param {{ t: number, bytes: number }[]} samples
+ */
+export function isStable(samples, { windowMs = 1000, lookbackMs = 2500, tolerance = 0.05 } = {}) {
+  if (samples.length < 3) return false;
+  const last = samples[samples.length - 1].t;
+  if (last < lookbackMs + windowMs) return false;
+  const values = speedSeries(samples, windowMs)
+    .filter((p) => p.t >= last - lookbackMs)
+    .map((p) => p.mbps);
+  if (values.length < 5 || mean(values) <= 0) return false;
+  return variation(values) <= tolerance;
+}
+
+/**
+ * Розбирає заголовок Server-Timing: "cfRequestDuration;dur=12.3, cache;desc=hit"
+ * @param {string | null | undefined} header
+ * @returns {Record<string, number>} назва → тривалість, мс
+ */
+export function parseServerTiming(header) {
+  /** @type {Record<string, number>} */
+  const out = {};
+  if (!header) return out;
+  for (const part of header.split(',')) {
+    const [name, ...params] = part.trim().split(';');
+    if (!name) continue;
+    const dur = params.map((p) => p.trim()).find((p) => p.startsWith('dur='));
+    out[name.trim()] = dur ? Number(dur.slice(4)) || 0 : 0;
+  }
+  return out;
+}

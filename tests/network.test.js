@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { NetworkEngine, makePayload, getPayload, fetchUpload, capChunk } from '../src/core/NetworkEngine.js';
+import {
+  NetworkEngine,
+  makePayload,
+  getPayload,
+  fetchUpload,
+  capChunk,
+  subtractServer,
+} from '../src/core/NetworkEngine.js';
 import { ServerSelector } from '../src/services/ServerSelector.js';
 
 const server = {
@@ -236,6 +243,92 @@ describe('Resource Timing (точний RTT)', () => {
     expect(perf.cleared).toBeGreaterThanOrEqual(fastConfig.ping.count);
     // Без очищення вже з другого пінгу запис не влізе → тихий wall-clock замість 7.5 мс
     expect(ping.samples.every((v) => v === 7.5)).toBe(true);
+  });
+});
+
+describe('Server-Timing — час обробки на сервері віднімається від RTT', () => {
+  const stServer = { ...server, serverTimingNames: ['cfRequestDuration'] };
+
+  it('subtractServer', () => {
+    expect(subtractServer(20, 5)).toBe(15);
+    expect(subtractServer(20, 0)).toBe(20);
+    expect(subtractServer(20, 25)).toBe(20); // неправдоподібно — лишаємо сирий RTT
+  });
+
+  it('з Resource Timing (entry.serverTiming)', async () => {
+    const base = mockFetch();
+    const entries = new Map();
+    const perf = {
+      clearResourceTimings: () => entries.clear(),
+      getEntriesByName: (n) => (entries.has(n) ? [entries.get(n)] : []),
+    };
+    const fetchImpl = async (url, init) => {
+      const res = await base(url, init);
+      entries.set(url, {
+        requestStart: 100,
+        responseStart: 112,
+        serverTiming: [
+          { name: 'cfRequestDuration', duration: 2 },
+          { name: 'other', duration: 50 },
+        ],
+      });
+      return res;
+    };
+    const engine = new NetworkEngine({ server: stServer, config: fastConfig, fetchImpl, perf });
+    const ping = await engine.measurePing();
+    expect(ping.samples.every((v) => v === 10)).toBe(true);
+  });
+
+  it('без Resource Timing — із заголовка Server-Timing', async () => {
+    let t = 0;
+    const now = () => t;
+    const fetchImpl = async () => {
+      t += 30; // «мережа» 30 мс
+      return new Response('', { headers: { 'Server-Timing': 'cfRequestDuration;dur=4' } });
+    };
+    const engine = new NetworkEngine({ server: stServer, config: fastConfig, fetchImpl, now });
+    expect(await engine.singlePing()).toBe(26);
+  });
+});
+
+describe('раннє завершення фази', () => {
+  const longConfig = {
+    ...fastConfig,
+    download: { ...fastConfig.download, durationMs: 4000 },
+    warmupMs: 100,
+    liveWindowMs: 200,
+    sampleIntervalMs: 50,
+  };
+  // Рівномірний «канал»: кожен чанк 16 КБ за ~2 мс → стабільна швидкість
+  it('стабільна швидкість → фаза завершується раніше', async () => {
+    const engine = new NetworkEngine({
+      server,
+      config: { ...longConfig, earlyStop: { enabled: true, minDurationMs: 600, lookbackMs: 400, tolerance: 0.5 } },
+      fetchImpl: mockFetch(),
+    });
+    const dl = await engine.measureDownload();
+    expect(dl.stoppedEarly).toBe(true);
+    expect(dl.durationMs).toBeLessThan(2500);
+    expect(dl.mbps).toBeGreaterThan(0);
+  });
+
+  it('вимкнено → фаза триває повністю', async () => {
+    const engine = new NetworkEngine({
+      server,
+      config: { ...longConfig, download: { ...longConfig.download, durationMs: 800 }, earlyStop: { enabled: false } },
+      fetchImpl: mockFetch(),
+    });
+    const dl = await engine.measureDownload();
+    expect(dl.stoppedEarly).toBe(false);
+    expect(dl.durationMs).toBeGreaterThanOrEqual(750);
+  });
+
+  it('результат містить і P90, і середню', async () => {
+    const engine = new NetworkEngine({ server, config: fastConfig, fetchImpl: mockFetch() });
+    const dl = await engine.measureDownload();
+    expect(dl.mbpsAvg).toBeGreaterThan(0);
+    expect(dl.mbpsP90).toBeGreaterThan(0);
+    expect(dl.mbps).toBe(dl.mbpsP90);
   });
 });
 

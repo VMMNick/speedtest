@@ -11,6 +11,7 @@
  * @property {string} downloadUrl GET ?bytes=N
  * @property {string} uploadUrl   POST
  * @property {string} [metaUrl]   GET JSON з IP/провайдером/містом
+ * @property {string[]} [serverTimingNames] Server-Timing метрики, що віднімаються від RTT
  */
 
 /**
@@ -38,7 +39,10 @@
 
 /**
  * @typedef {object} ThroughputResult
- * @property {number} mbps
+ * @property {number} mbps          фінальна (за CONFIG.aggregate)
+ * @property {number} mbpsAvg       середня після розгону
+ * @property {number} mbpsP90       90-й перцентиль після розгону
+ * @property {boolean} stoppedEarly фазу завершено раніше через стабільну швидкість
  * @property {number} bytes
  * @property {number} durationMs
  * @property {number[]} speeds

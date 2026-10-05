@@ -45,6 +45,17 @@ const polar = (deg, r = R) => {
   return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
 };
 
+/**
+ * Шкала датчика: пінг — своя; швидкість — до 1 Гбіт/с, а якщо значення більше —
+ * мультигігабітна (до 10 Гбіт/с).
+ * @param {'ping' | 'speed'} kind
+ * @param {number} value
+ */
+export function scaleFor(kind, value = 0) {
+  if (kind === 'ping') return PING_SCALE;
+  return value > CONFIG.gaugeScale[CONFIG.gaugeScale.length - 1] ? CONFIG.gaugeScaleGigabit : CONFIG.gaugeScale;
+}
+
 /** Значення → частка шкали (0..1) з нелінійною шкалою. */
 export function valueToFraction(value, scale) {
   if (value <= scale[0]) return 0;
@@ -131,8 +142,9 @@ export class UIController {
     );
   }
 
-  setGaugeScale(kind) {
-    const scale = kind === 'ping' ? PING_SCALE : CONFIG.gaugeScale;
+  setGaugeScale(kind, value = 0) {
+    this.scaleKind = kind;
+    const scale = scaleFor(kind, value);
     if (scale === this.scale) return;
     this.scale = scale;
     this._buildGauge(scale);
@@ -142,6 +154,10 @@ export class UIController {
   setGaugeValue(value, { decimals = 'mbps' } = {}) {
     this.target = Math.max(0, value || 0);
     this.format = decimals === 'ms' ? formatMs : formatMbps;
+    // Автоперемикання на мультигігабітну шкалу (лише вгору — до наступної фази)
+    if (this.scaleKind === 'speed' && this.target > this.scale[this.scale.length - 1]) {
+      this.setGaugeScale('speed', this.target);
+    }
     if (!this.raf) this.raf = requestAnimationFrame(() => this._animate());
   }
 
@@ -231,16 +247,19 @@ export class UIController {
       r.ping.jitter < 5 ? 'Відмінно' : r.ping.jitter < 20 ? 'Нормально' : 'Високий',
     );
     this.setMetric('loss', r.ping.loss, r.ping.loss === 0 ? 'Без втрат' : 'Частина запитів без відповіді');
-    this.setMetric(
-      'download',
-      r.download.mbps,
-      `${formatBytes(r.download.bytes)} за ${(r.download.durationMs / 1000).toFixed(1)} с`,
-    );
-    this.setMetric(
-      'upload',
-      r.upload.mbps,
-      `${formatBytes(r.upload.bytes)} за ${(r.upload.durationMs / 1000).toFixed(1)} с`,
-    );
+    for (const dir of /** @type {const} */ (['download', 'upload'])) {
+      const d = r[dir];
+      const parts = [
+        d.mbpsAvg != null ? `сер. ${formatMbps(d.mbpsAvg)}` : null,
+        formatBytes(d.bytes),
+        `${(d.durationMs / 1000).toFixed(1)} с`,
+        d.stoppedEarly ? 'достроково' : null,
+      ].filter(Boolean);
+      this.setMetric(dir, d.mbps, parts.join(' · '));
+      $(`[data-metric="${dir}"] [data-sub]`).title = d.stoppedEarly
+        ? 'Швидкість стабілізувалась — фазу завершено раніше. Значення — 90-й перцентиль, «сер.» — середня.'
+        : 'Значення — 90-й перцентиль швидкості, «сер.» — середня.';
+    }
     this.setMetric('stability', r.stability.score, `Оцінка ${r.stability.grade}`);
     $('[data-metric="stability"]').dataset.grade = r.stability.grade;
 

@@ -12,6 +12,7 @@ import '@fontsource-variable/jetbrains-mono';
 import { UIController, formatMbps, formatMs } from './ui/UIController.js';
 import { ThemeManager } from './ui/ThemeManager.js';
 import { StorageManager } from './services/StorageManager.js';
+import { LIGHT_CONFIG, detectLightMode, mergeDeep } from './core/config.js';
 import { ServerSelector } from './services/ServerSelector.js';
 
 const PHASE_NAMES = { ping: 'Пінг', download: 'Завантаження', upload: 'Вивантаження' };
@@ -60,8 +61,15 @@ let running = false;
 
 // ───────────── Ініціалізація ─────────────
 
+/** Економний режим: Save-Data або повільна мережа (Network Information API, де підтримується). */
+const connection = /** @type {any} */ (navigator).connection;
+const lightMode = () => detectLightMode(connection);
+const showModeNote = () => (document.getElementById('mode-note').hidden = !lightMode());
+
 async function init() {
   ui.setSound(settings.sound);
+  showModeNote();
+  connection?.addEventListener?.('change', showModeNote);
   // Передзавантаження графіків за наміром користувача
   for (const id of ['btn-start', 'btn-history']) {
     const el = document.getElementById(id);
@@ -152,7 +160,8 @@ async function startTest() {
     }
   }
   // window.__SPEEDTEST_CONFIG__ — гачок для E2E-тестів (коротші фази); у звичайній роботі не заданий
-  const config = /** @type {any} */ (window).__SPEEDTEST_CONFIG__;
+  const testOverride = /** @type {any} */ (window).__SPEEDTEST_CONFIG__;
+  const config = mergeDeep(lightMode() ? LIGHT_CONFIG : {}, testOverride ?? {});
   getWorker().postMessage({ type: 'start', server: selected.server, config });
 }
 

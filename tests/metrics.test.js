@@ -143,3 +143,83 @@ describe('speedSeries — однопрохідний ряд швидкості',
     expect(M.speedSeries([{ t: 0, bytes: 0 }], 1000)).toEqual([]);
   });
 });
+
+describe('throughputP90', () => {
+  const series = (rateAt) => {
+    const out = [{ t: 0, bytes: 0 }];
+    let bytes = 0;
+    for (let t = 200; t <= 10_000; t += 200) {
+      bytes += rateAt(t) * 125 * 200; // Мбіт/с → байт за 200 мс
+      out.push({ t, bytes });
+    }
+    return out;
+  };
+
+  it('на рівному каналі ≈ середній', () => {
+    const s = series(() => 100);
+    expect(M.throughputP90(s, 1500)).toBeCloseTo(100, 0);
+    expect(M.throughput(s, 1500)).toBeCloseTo(100, 0);
+  });
+
+  it('на каналі з просіданнями — вище за середню (ємність каналу)', () => {
+    const s = series((t) => (Math.floor(t / 1000) % 3 === 0 ? 20 : 100));
+    expect(M.throughputP90(s, 1500)).toBeGreaterThan(M.throughput(s, 1500) + 10);
+    expect(M.throughputP90(s, 1500)).toBeLessThanOrEqual(100.01);
+  });
+
+  it('короткий тест — запасний варіант (середня)', () => {
+    const s = [
+      { t: 0, bytes: 0 },
+      { t: 200, bytes: 250_000 },
+    ];
+    expect(M.throughputP90(s, 1500)).toBeCloseTo(10);
+  });
+});
+
+describe('isStable (раннє завершення)', () => {
+  const make = (rateAt, until = 6000) => {
+    const out = [{ t: 0, bytes: 0 }];
+    let bytes = 0;
+    for (let t = 200; t <= until; t += 200) {
+      bytes += rateAt(t) * 125 * 200;
+      out.push({ t, bytes });
+    }
+    return out;
+  };
+
+  it('рівна швидкість — стабільно', () => {
+    expect(M.isStable(make(() => 50))).toBe(true);
+  });
+
+  it('скачки ±50% — нестабільно', () => {
+    expect(
+      M.isStable(
+        make((t) => (t % 400 === 0 ? 75 : 25)),
+        { windowMs: 200 },
+      ),
+    ).toBe(false);
+  });
+
+  it('замало даних — ще рано', () => {
+    expect(M.isStable(make(() => 50, 2000))).toBe(false);
+    expect(M.isStable([{ t: 0, bytes: 0 }])).toBe(false);
+  });
+
+  it('нульова швидкість не вважається стабільною', () => {
+    expect(M.isStable(make(() => 0))).toBe(false);
+  });
+});
+
+describe('parseServerTiming', () => {
+  it('розбирає кілька метрик', () => {
+    expect(M.parseServerTiming('cfRequestDuration;dur=12.5, cache;desc="HIT", db;dur=3')).toEqual({
+      cfRequestDuration: 12.5,
+      cache: 0,
+      db: 3,
+    });
+  });
+  it('порожній / відсутній заголовок', () => {
+    expect(M.parseServerTiming(null)).toEqual({});
+    expect(M.parseServerTiming('')).toEqual({});
+  });
+});
