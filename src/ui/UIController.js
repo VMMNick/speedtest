@@ -27,7 +27,7 @@ const PHASE_LABELS = {
 
 export const formatMbps = (v) => {
   if (v == null || Number.isNaN(v)) return '—';
-  if (v >= 1000) return (v / 1000).toFixed(2) + 'k';
+  // ≥ 100 — цілі числа (у т. ч. гігабітні канали: «1234», а не «1.23k» — так однозначніше й парситься)
   if (v >= 100) return v.toFixed(0);
   if (v >= 10) return v.toFixed(1);
   return v.toFixed(2);

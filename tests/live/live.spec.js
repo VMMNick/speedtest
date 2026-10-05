@@ -3,6 +3,7 @@
  * Перевіряє те, що неможливо перевірити з моками: CORS реального API,
  * base path на GitHub Pages, CSP у бойових умовах.
  */
+import { appendFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 
 // Коротші фази, щоб не навантажувати Cloudflare з CI і не впертися в rate limit
@@ -55,9 +56,20 @@ test('сайт працює зі справжнім Cloudflare', async ({ page, 
   await expect(page.locator('#summary')).toBeVisible({ timeout: 60_000 });
 
   const value = async (m) => Number(await page.locator(`[data-metric="${m}"] [data-value]`).textContent());
-  expect(await value('ping')).toBeGreaterThan(0);
-  expect(await value('download')).toBeGreaterThan(0.1);
-  expect(await value('upload')).toBeGreaterThan(0.1);
+  const [ping, download, upload] = [await value('ping'), await value('download'), await value('upload')];
+  // Результат у звіті — видно навіть якщо далі щось упаде
+  test
+    .info()
+    .annotations.push({ type: 'result', description: `ping ${ping} ms · ↓ ${download} Mbps · ↑ ${upload} Mbps` });
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(
+      process.env.GITHUB_STEP_SUMMARY,
+      `### Live-тест (GitHub runner → Cloudflare)\n\n| Пінг | Download | Upload |\n| --- | --- | --- |\n| ${ping} мс | ${download} Мбіт/с | ${upload} Мбіт/с |\n`,
+    );
+  }
+  expect(ping).toBeGreaterThan(0);
+  expect(download).toBeGreaterThan(0.1);
+  expect(upload).toBeGreaterThan(0.1);
 
   // 4. Результат зберігся в IndexedDB
   await page.getByRole('button', { name: 'Історія тестів' }).click();
@@ -66,9 +78,4 @@ test('сайт працює зі справжнім Cloudflare', async ({ page, 
   // 5. Жодних помилок і порушень CSP
   expect(await page.evaluate(() => /** @type {any} */ (window).__cspViolations)).toEqual([]);
   expect(problems).toEqual([]);
-
-  test.info().annotations.push({
-    type: 'result',
-    description: `ping ${await value('ping')} ms · ↓ ${await value('download')} Mbps · ↑ ${await value('upload')} Mbps`,
-  });
 });
