@@ -23,7 +23,7 @@ export default [
   },
   {
     // Код у page.evaluate() виконується в браузері
-    files: ['tests/e2e/**/*.js'],
+    files: ['tests/e2e/**/*.js', 'tests/live/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {

@@ -40,16 +40,16 @@
 
     <header class="topbar">
       <div class="brand">
-        <span class="icon icon--lg" style="--icon: url(/assets/icons/speedometer.svg)" aria-hidden="true"></span>
+        <span class="icon icon--lg icon--speedometer" aria-hidden="true"></span>
         <span class="brand__name">Спід<span>тест</span></span>
       </div>
       <nav class="topbar__actions" aria-label="Дії">
         <button class="icon-btn" id="btn-sound" type="button" aria-pressed="true" title="Звук завершення">
-          <span class="icon" style="--icon: url(/assets/icons/sound.svg)" aria-hidden="true"></span>
+          <span class="icon icon--sound" aria-hidden="true"></span>
           <span class="sr-only">Звук завершення</span>
         </button>
         <button class="icon-btn" id="btn-history" type="button" title="Історія тестів">
-          <span class="icon" style="--icon: url(/assets/icons/history.svg)" aria-hidden="true"></span>
+          <span class="icon icon--history" aria-hidden="true"></span>
           <span class="sr-only">Історія тестів</span>
         </button>
         <button class="icon-btn" id="btn-theme" type="button" title="Змінити тему">
@@ -62,21 +62,21 @@
     <main id="main" class="layout">
       <section class="server-bar card" aria-label="Інформація про з'єднання">
         <div class="server-bar__item">
-          <span class="icon" style="--icon: url(/assets/icons/pin.svg)" aria-hidden="true"></span>
+          <span class="icon icon--pin" aria-hidden="true"></span>
           <div>
             <div class="label">Сервер</div>
             <div class="value" id="server-name">Визначаю…</div>
           </div>
         </div>
         <div class="server-bar__item">
-          <span class="icon" style="--icon: url(/assets/icons/wifi.svg)" aria-hidden="true"></span>
+          <span class="icon icon--wifi" aria-hidden="true"></span>
           <div>
             <div class="label">Провайдер</div>
             <div class="value" id="server-isp">—</div>
           </div>
         </div>
         <div class="server-bar__item">
-          <span class="icon" style="--icon: url(/assets/icons/globe.svg)" aria-hidden="true"></span>
+          <span class="icon icon--globe" aria-hidden="true"></span>
           <div>
             <div class="label">IP-адреса</div>
             <div class="value mono" id="server-ip">—</div>
@@ -99,13 +99,7 @@
               </linearGradient>
             </defs>
             <path class="gauge__track" id="gauge-track" pathLength="100" />
-            <path
-              class="gauge__progress"
-              id="gauge-progress"
-              pathLength="100"
-              stroke-dasharray="0 100"
-              style="opacity: 0"
-            />
+            <path class="gauge__progress" id="gauge-progress" pathLength="100" stroke-dasharray="0 100" />
             <g id="gauge-ticks" class="gauge__ticks"></g>
             <g class="gauge__needle" id="gauge-needle">
               <path d="M150 150 L146 148 L150 52 L154 148 Z" />
@@ -139,7 +133,7 @@
       <section class="metrics" aria-label="Результати">
         <article class="metric card" data-metric="download">
           <header class="metric__head">
-            <span class="icon" style="--icon: url(/assets/icons/download.svg)" aria-hidden="true"></span>
+            <span class="icon icon--download" aria-hidden="true"></span>
             Завантаження
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>Мбіт/с</small></div>
@@ -147,7 +141,7 @@
         </article>
         <article class="metric card" data-metric="upload">
           <header class="metric__head">
-            <span class="icon" style="--icon: url(/assets/icons/upload.svg)" aria-hidden="true"></span>
+            <span class="icon icon--upload" aria-hidden="true"></span>
             Вивантаження
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>Мбіт/с</small></div>
@@ -155,7 +149,7 @@
         </article>
         <article class="metric card" data-metric="ping">
           <header class="metric__head">
-            <span class="icon" style="--icon: url(/assets/icons/ping.svg)" aria-hidden="true"></span>
+            <span class="icon icon--ping" aria-hidden="true"></span>
             Пінг
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>мс</small></div>
@@ -163,7 +157,7 @@
         </article>
         <article class="metric card" data-metric="jitter">
           <header class="metric__head">
-            <span class="icon" style="--icon: url(/assets/icons/jitter.svg)" aria-hidden="true"></span>
+            <span class="icon icon--jitter" aria-hidden="true"></span>
             Джиттер
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>мс</small></div>
@@ -171,7 +165,7 @@
         </article>
         <article class="metric card" data-metric="loss">
           <header class="metric__head">
-            <span class="icon" style="--icon: url(/assets/icons/loss.svg)" aria-hidden="true"></span>
+            <span class="icon icon--loss" aria-hidden="true"></span>
             Втрати
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>%</small></div>
@@ -179,7 +173,7 @@
         </article>
         <article class="metric card" data-metric="stability">
           <header class="metric__head">
-            <span class="icon" style="--icon: url(/assets/icons/shield.svg)" aria-hidden="true"></span>
+            <span class="icon icon--shield" aria-hidden="true"></span>
             Стабільність
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>/100</small></div>

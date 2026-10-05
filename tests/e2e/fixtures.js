@@ -95,6 +95,15 @@ export const test = base.extend({
   app: async ({ page, context, mock, errors }, use) => {
     void errors; // підключаємо слухачі до завантаження сторінки
     await mockCloudflare(context, mock);
+    // Збираємо порушення CSP (CSP є лише в продакшн-збірці, яку й тестуємо)
+    await page.addInitScript(() => {
+      // @ts-ignore
+      window.__cspViolations = [];
+      document.addEventListener('securitypolicyviolation', (e) =>
+        // @ts-ignore
+        window.__cspViolations.push(`${e.violatedDirective} ← ${e.blockedURI || 'inline'}`),
+      );
+    });
     await page.addInitScript((cfg) => {
       // @ts-ignore — тестовий гачок, див. app.js
       window.__SPEEDTEST_CONFIG__ = cfg;
@@ -112,5 +121,11 @@ export async function runFullTest(page) {
   await page.getByRole('button', { name: /старт|ще раз/i }).click();
   await expect(page.locator('#summary')).toBeVisible({ timeout: 30_000 });
 }
+
+/**
+ * @param {import('@playwright/test').Page} page
+ * @returns {Promise<string[]>}
+ */
+export const cspViolations = (page) => page.evaluate(() => /** @type {any} */ (window).__cspViolations ?? []);
 
 export { expect };

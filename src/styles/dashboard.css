@@ -89,6 +89,7 @@
   stroke: var(--gauge-track);
 }
 .gauge__progress {
+  opacity: 0; /* показується з JS, коли значення > 0 (інакше round linecap малює «крапки») */
   stroke: url(#gauge-grad-download);
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-download) 50%, transparent));
 }

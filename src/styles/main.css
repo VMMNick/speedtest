@@ -89,6 +89,43 @@ button {
   -webkit-mask: var(--icon) center / contain no-repeat;
   mask: var(--icon) center / contain no-repeat;
 }
+/* Набір іконок — класи замість inline style (сумісно з суворою CSP) */
+.icon--download {
+  --icon: url(/assets/icons/download.svg);
+}
+.icon--globe {
+  --icon: url(/assets/icons/globe.svg);
+}
+.icon--history {
+  --icon: url(/assets/icons/history.svg);
+}
+.icon--jitter {
+  --icon: url(/assets/icons/jitter.svg);
+}
+.icon--loss {
+  --icon: url(/assets/icons/loss.svg);
+}
+.icon--pin {
+  --icon: url(/assets/icons/pin.svg);
+}
+.icon--ping {
+  --icon: url(/assets/icons/ping.svg);
+}
+.icon--shield {
+  --icon: url(/assets/icons/shield.svg);
+}
+.icon--sound {
+  --icon: url(/assets/icons/sound.svg);
+}
+.icon--speedometer {
+  --icon: url(/assets/icons/speedometer.svg);
+}
+.icon--upload {
+  --icon: url(/assets/icons/upload.svg);
+}
+.icon--wifi {
+  --icon: url(/assets/icons/wifi.svg);
+}
 .icon--lg {
   width: 28px;
   height: 28px;

@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/VMMNick/speedtest/actions/workflows/ci.yml/badge.svg)](https://github.com/VMMNick/speedtest/actions/workflows/ci.yml)
 
+**Демо:** https://vmmnick.github.io/speedtest/
+
 Браузерний тест швидкості інтернету на чистому JavaScript: **пінг, джиттер, втрати, download, upload, пінг під навантаженням (bufferbloat)** та інтегральна оцінка стабільності з'єднання. Усі вимірювання виконуються у **Web Worker**, тож інтерфейс не фризить навіть на гігабітних каналах.
 
 ## Можливості
@@ -47,7 +49,7 @@ npm run test:e2e:report           # HTML-звіт останнього прог�
 
 - Cloudflare у тестах **підмінений** (`tests/e2e/fixtures.js`): детерміновані відповіді, керовані затримка, швидкість, недоступність і HTTP-помилки.
 - Фази скорочені до ~1 с через тестовий гачок `window.__SPEEDTEST_CONFIG__` (у звичайній роботі не заданий).
-- Сценарії: повний тест, повторний запуск, зупинка, клавіатура, недоступний сервер, HTTP 429, історія (збереження після перезавантаження, видалення, експорт CSV, очищення), теми без блимання, адаптивність (desktop + Pixel 7), доступність (axe WCAG 2.1 AA у світлій і темній темі, озвучення фаз).
+- Сценарії: CSP без порушень, повний тест, повторний запуск, зупинка, клавіатура, недоступний сервер, HTTP 429, історія (збереження після перезавантаження, видалення, експорт CSV, очищення), теми без блимання, адаптивність (desktop + Pixel 7), доступність (axe WCAG 2.1 AA у світлій і темній темі, озвучення фаз).
 
 ## CI
 
@@ -56,7 +58,17 @@ GitHub Actions (`.github/workflows/ci.yml`) на кожен push у `main`, pull
 1. **quality** (Node 22 і 24): `npm ci` → ESLint → Prettier → typecheck → Vitest → build (артефакт `dist`)
 2. **e2e** (після quality): Playwright Chromium з кешем браузера → звіт `playwright-report` (артефакт), трейси при падінні
 
+3. **deploy** (лише `main`): збірка з `BASE_PATH=/<repo>/` → GitHub Pages
+4. **live** (після deploy): Playwright проти задеплоєного сайту і **справжнього** Cloudflare — CORS, base path, CSP, повний тест
+
 Dependabot щотижня оновлює npm-залежності (dev-інструменти одним PR) і щомісяця — версії GitHub Actions.
+
+## Деплой і безпека
+
+- **GitHub Pages** через Actions. Один раз: _Settings → Pages → Build and deployment → Source: **GitHub Actions**_.
+- **Base path** задається змінною `BASE_PATH` (за замовчуванням `/`), тож ту саму збірку можна викласти будь-куди.
+- **Content-Security-Policy** додається в продакшн-збірку як `<meta>` плагіном `config/vite-plugin-csp.js` (Pages не дозволяє власні HTTP-заголовки). `default-src 'none'`, без `unsafe-inline`/`unsafe-eval`; хеш inline-скрипта теми рахується автоматично. Мережа дозволена лише до `self` і `speed.cloudflare.com`. Відсутність порушень перевіряють E2E- і live-тести.
+- Живий smoke-тест вручну: `LIVE_URL=https://vmmnick.github.io/speedtest/ npm run test:live`.
 
 Рекомендовані розширення VS Code — у `.vscode/extensions.json`.
 
