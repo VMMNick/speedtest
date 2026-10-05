@@ -223,7 +223,7 @@ button {
   background: var(--color-surface-2);
 }
 .btn--danger {
-  color: var(--color-danger);
+  color: var(--color-danger-text);
   border-color: color-mix(in srgb, var(--color-danger) 40%, transparent);
   background: transparent;
 }

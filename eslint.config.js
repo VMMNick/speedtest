@@ -22,6 +22,11 @@ export default [
     languageOptions: { globals: { ...globals.node } },
   },
   {
+    // Код у page.evaluate() виконується в браузері
+    files: ['tests/e2e/**/*.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     rules: {
       'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrors: 'none' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],

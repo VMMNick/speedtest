@@ -30,6 +30,10 @@
   --color-success: #16a34a;
   --color-warning: #d97706;
   --color-danger: #dc2626;
+  /* Варіанти для ТЕКСТУ: контраст ≥ 4.5:1 на світлому фоні (WCAG AA) */
+  --color-success-text: #15803d;
+  --color-warning-text: #b45309;
+  --color-danger-text: #b91c1c;
 
   --shadow: 0 1px 2px rgb(20 26 46 / 0.04), 0 8px 24px rgb(20 26 46 / 0.06);
   --gauge-track: #e6eaf3;
@@ -54,6 +58,9 @@
   --color-success: #4ade80;
   --color-warning: #fbbf24;
   --color-danger: #f87171;
+  --color-success-text: var(--color-success);
+  --color-warning-text: var(--color-warning);
+  --color-danger-text: var(--color-danger);
 
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px rgb(0 0 0 / 0.35);
   --gauge-track: #1c2546;

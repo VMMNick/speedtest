@@ -147,7 +147,7 @@
   color: var(--color-upload);
 }
 .gauge[data-phase='ping'] .gauge__phase {
-  color: var(--color-ping);
+  color: var(--color-warning-text);
 }
 .gauge__value {
   font-size: clamp(36px, 9vw, 52px);
@@ -347,10 +347,10 @@
   color: var(--color-ping);
 }
 .metric[data-metric='loss'] .icon {
-  color: var(--color-danger);
+  color: var(--color-danger-text);
 }
 .metric[data-metric='stability'] .icon {
-  color: var(--color-success);
+  color: var(--color-success-text);
 }
 
 /* Індикатор «зараз вимірюється» */
@@ -377,14 +377,14 @@
 
 .metric[data-grade='A'] [data-value],
 .metric[data-grade='B'] [data-value] {
-  color: var(--color-success);
+  color: var(--color-success-text);
 }
 .metric[data-grade='C'] [data-value] {
-  color: var(--color-warning);
+  color: var(--color-warning-text);
 }
 .metric[data-grade='D'] [data-value],
 .metric[data-grade='F'] [data-value] {
-  color: var(--color-danger);
+  color: var(--color-danger-text);
 }
 
 /* ───── Графік ───── */
@@ -439,16 +439,16 @@
 }
 .grade[data-grade='A'],
 .grade[data-grade='B'] {
-  color: var(--color-success);
+  color: var(--color-success-text);
   background: color-mix(in srgb, var(--color-success) 14%, transparent);
 }
 .grade[data-grade='C'] {
-  color: var(--color-warning);
+  color: var(--color-warning-text);
   background: color-mix(in srgb, var(--color-warning) 14%, transparent);
 }
 .grade[data-grade='D'],
 .grade[data-grade='F'] {
-  color: var(--color-danger);
+  color: var(--color-danger-text);
   background: color-mix(in srgb, var(--color-danger) 14%, transparent);
 }
 
@@ -468,7 +468,7 @@
   border: 1px solid var(--color-border);
 }
 .usecases li.ok {
-  color: var(--color-success);
+  color: var(--color-success-text);
   border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
 }
 .usecases li.bad {

@@ -117,7 +117,9 @@ async function startTest() {
       return;
     }
   }
-  getWorker().postMessage({ type: 'start', server: selected.server });
+  // window.__SPEEDTEST_CONFIG__ — гачок для E2E-тестів (коротші фази); у звичайній роботі не заданий
+  const config = /** @type {any} */ (window).__SPEEDTEST_CONFIG__;
+  getWorker().postMessage({ type: 'start', server: selected.server, config });
 }
 
 function stopTest() {
@@ -229,7 +231,7 @@ async function openHistory() {
 async function exportCSV() {
   const entries = await storage.getHistory();
   if (!entries.length) return ui.toast('Історія порожня');
-  const blob = new Blob(['﻿' + StorageManager.toCSV(entries)], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob(['\uFEFF' + StorageManager.toCSV(entries)], { type: 'text/csv;charset=utf-8' });
   const a = Object.assign(document.createElement('a'), {
     href: URL.createObjectURL(blob),
     download: `speedtest-history-${new Date().toISOString().slice(0, 10)}.csv`,
