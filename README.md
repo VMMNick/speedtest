@@ -1,5 +1,7 @@
 # Спідтест — Internet Speed Test
 
+[![CI](https://github.com/VMMNick/speedtest/actions/workflows/ci.yml/badge.svg)](https://github.com/VMMNick/speedtest/actions/workflows/ci.yml)
+
 Браузерний тест швидкості інтернету на чистому JavaScript: **пінг, джиттер, втрати, download, upload, пінг під навантаженням (bufferbloat)** та інтегральна оцінка стабільності з'єднання. Усі вимірювання виконуються у **Web Worker**, тож інтерфейс не фризить навіть на гігабітних каналах.
 
 ## Можливості
@@ -23,7 +25,7 @@ npm run build     # збірка в dist/
 npm run preview   # перегляд продакшн-збірки
 ```
 
-Потрібен Node.js 20+.
+Потрібен Node.js 22.12+ (Node 20 вже не підтримується Vitest 5 і досяг кінця життєвого циклу).
 
 ## Якість коду
 
@@ -46,6 +48,15 @@ npm run test:e2e:report           # HTML-звіт останнього прог�
 - Cloudflare у тестах **підмінений** (`tests/e2e/fixtures.js`): детерміновані відповіді, керовані затримка, швидкість, недоступність і HTTP-помилки.
 - Фази скорочені до ~1 с через тестовий гачок `window.__SPEEDTEST_CONFIG__` (у звичайній роботі не заданий).
 - Сценарії: повний тест, повторний запуск, зупинка, клавіатура, недоступний сервер, HTTP 429, історія (збереження після перезавантаження, видалення, експорт CSV, очищення), теми без блимання, адаптивність (desktop + Pixel 7), доступність (axe WCAG 2.1 AA у світлій і темній темі, озвучення фаз).
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) на кожен push у `main`, pull request і вручну:
+
+1. **quality** (Node 22 і 24): `npm ci` → ESLint → Prettier → typecheck → Vitest → build (артефакт `dist`)
+2. **e2e** (після quality): Playwright Chromium з кешем браузера → звіт `playwright-report` (артефакт), трейси при падінні
+
+Dependabot щотижня оновлює npm-залежності (dev-інструменти одним PR) і щомісяця — версії GitHub Actions.
 
 Рекомендовані розширення VS Code — у `.vscode/extensions.json`.
 
