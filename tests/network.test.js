@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { NetworkEngine, makePayload, fetchUpload } from '../src/core/NetworkEngine.js';
+import { NetworkEngine, makePayload, fetchUpload, capChunk } from '../src/core/NetworkEngine.js';
 import { ServerSelector } from '../src/services/ServerSelector.js';
 
 const server = {
@@ -157,6 +157,108 @@ describe('NetworkEngine', () => {
     const t0 = Date.now();
     await expect(p).rejects.toMatchObject({ name: 'AbortError' });
     expect(Date.now() - t0).toBeLessThan(2000);
+  });
+});
+
+describe('Resource Timing (точний RTT)', () => {
+  /** Імітація буфера Resource Timing з лімітом як у браузері. */
+  function fakePerf(limit = 3) {
+    let buffer = [];
+    const perf = {
+      cleared: 0,
+      bufferSize: limit,
+      setResourceTimingBufferSize: vi.fn((n) => (perf.bufferSize = n)),
+      clearResourceTimings: vi.fn(() => {
+        perf.cleared++;
+        buffer = [];
+      }),
+      add(name) {
+        if (buffer.length < perf.bufferSize) buffer.push({ name, requestStart: 100, responseStart: 107.5 });
+      },
+      getEntriesByName: (name) => buffer.filter((e) => e.name === name),
+    };
+    return perf;
+  }
+
+  it('використовує responseStart − requestStart, а не wall-clock', async () => {
+    const perf = fakePerf();
+    const base = mockFetch();
+    const fetchImpl = async (url, init) => {
+      const res = await base(url, init);
+      perf.add(url);
+      return res;
+    };
+    const engine = new NetworkEngine({ server, config: fastConfig, fetchImpl, perf });
+    const ping = await engine.measurePing();
+    expect(ping.samples.every((v) => v === 7.5)).toBe(true);
+  });
+
+  it('очищає буфер перед кожним пінгом — переповнення не ламає вимір', async () => {
+    const perf = fakePerf(3);
+    const base = mockFetch();
+    const fetchImpl = async (url, init) => {
+      const res = await base(url, init);
+      perf.add(url);
+      // Між пінгами завершуються download-запити й забивають буфер
+      for (let i = 0; i < 5; i++) perf.add(`https://mock.test/down?bytes=${i}`);
+      return res;
+    };
+    const engine = new NetworkEngine({ server, config: fastConfig, fetchImpl, perf });
+    expect(perf.setResourceTimingBufferSize).toHaveBeenCalledWith(1000);
+    perf.bufferSize = 3; // браузер міг не дозволити збільшити буфер
+    const ping = await engine.measurePing();
+    expect(perf.cleared).toBeGreaterThanOrEqual(fastConfig.ping.count);
+    // Без очищення вже з другого пінгу запис не влізе → тихий wall-clock замість 7.5 мс
+    expect(ping.samples.every((v) => v === 7.5)).toBe(true);
+  });
+});
+
+describe('capChunk — обмеження розміру чанка за швидкістю', () => {
+  const settings = { initialBytes: 1000, maxRequestMs: 2000 };
+
+  it('обрізає чанк, який триватиме довше maxRequestMs', () => {
+    // 10 000 байт за 100 мс = 100 байт/мс → за 2 с не більше 200 000
+    expect(capChunk(1_000_000, 10_000, 100, settings)).toBe(200_000);
+  });
+
+  it('не чіпає чанк, що вкладається в ліміт', () => {
+    expect(capChunk(50_000, 10_000, 100, settings)).toBe(50_000);
+  });
+
+  it('не опускається нижче initialBytes і ігнорує некоректний час', () => {
+    expect(capChunk(5000, 10, 1000, settings)).toBe(1000);
+    expect(capChunk(5000, 10_000, 0, settings)).toBe(5000);
+    expect(capChunk(5000, 10_000, 100, { initialBytes: 1000 })).toBe(5000);
+  });
+
+  it('upload на повільному каналі не створює чанків, довших за maxRequestMs', async () => {
+    const RATE = 500; // байт/мс
+    const durations = [];
+    const uploadImpl = async (url, body, onBytes, signal) => {
+      const ms = body.size / RATE;
+      durations.push(ms);
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(resolve, ms);
+        signal.addEventListener('abort', () => {
+          clearTimeout(t);
+          reject(new DOMException('aborted', 'AbortError'));
+        });
+      });
+      onBytes(body.size);
+    };
+    const engine = new NetworkEngine({
+      server,
+      config: {
+        ...fastConfig,
+        upload: { ...fastConfig.upload, durationMs: 400, streams: 1, maxBytes: 10_000_000, maxRequestMs: 60, graceMs: 150 },
+      },
+      fetchImpl: mockFetch(),
+      uploadImpl,
+    });
+    const ul = await engine.measureUpload();
+    // Без обмеження чанк виріс би до 160 000 байт (= 320 мс) і пропав би після дедлайну
+    expect(Math.max(...durations)).toBeLessThanOrEqual(60 * 1.05);
+    expect(ul.bytes).toBeGreaterThan(0);
   });
 });
 

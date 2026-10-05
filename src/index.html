@@ -6,6 +6,18 @@
     <meta name="description" content="Швидкий тест інтернет-з'єднання: пінг, джиттер, швидкість завантаження та вивантаження, стабільність." />
     <meta name="theme-color" content="#0b1020" />
     <title>Спідтест — перевірка швидкості інтернету</title>
+    <!-- Тема ставиться ДО першого відмальовування, щоб не було «блимання». Логіка дублює ThemeManager. -->
+    <script>
+      (function () {
+        var mode = 'system';
+        try {
+          mode = (JSON.parse(localStorage.getItem('speedtest:settings')) || {}).theme || 'system';
+        } catch (e) {}
+        var dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0b1020' : '#f4f6fb');
+      })();
+    </script>
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/assets/icons/speedometer.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -92,7 +104,7 @@
             </g>
           </svg>
 
-          <div class="gauge__readout" aria-live="polite">
+          <div class="gauge__readout">
             <div class="gauge__phase" id="gauge-phase">Готовий</div>
             <div class="gauge__value mono" id="gauge-value">0</div>
             <div class="gauge__unit" id="gauge-unit">Мбіт/с</div>
@@ -228,6 +240,7 @@
     </dialog>
 
     <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+    <div class="sr-only" id="sr-announcer" aria-live="polite" aria-atomic="true"></div>
 
     <script type="module" src="./app.js"></script>
   </body>

@@ -47,6 +47,9 @@ export class NetworkEngine {
     this.aborted = false;
     this.controllers = new Set();
     this.pingCounter = 0;
+    // Download/upload теж пишуть записи в буфер Resource Timing (≈250 за замовчуванням).
+    // Збільшуємо його, щоб записи пінгів не губилися.
+    this.perf?.setResourceTimingBufferSize?.(1000);
   }
 
   /** Зупиняє всі активні запити. */
@@ -126,6 +129,9 @@ export class NetworkEngine {
     const timer = setTimeout(() => c.abort(), timeoutMs);
     const sep = this.server.pingUrl.includes('?') ? '&' : '?';
     const url = `${this.server.pingUrl}${sep}_=${++this.pingCounter}`;
+    // Очищаємо буфер перед КОЖНИМ пінгом: якщо він переповниться, запис не з'явиться,
+    // і вимір тихо перейде на wall-clock (завищений) — це спотворює bufferbloat.
+    this.perf?.clearResourceTimings?.();
     const t0 = this.now();
     try {
       const res = await this.fetch(url, { cache: 'no-store', signal: c.signal });
@@ -148,7 +154,6 @@ export class NetworkEngine {
     if (!this.perf?.getEntriesByName) return null;
     const entries = this.perf.getEntriesByName(url);
     const e = entries[entries.length - 1];
-    if (this.perf.clearResourceTimings && this.pingCounter % 50 === 0) this.perf.clearResourceTimings();
     if (!e || !e.requestStart || !e.responseStart) return null;
     const rtt = e.responseStart - e.requestStart;
     return rtt > 0 ? rtt : null;
@@ -263,6 +268,7 @@ export class NetworkEngine {
         const c = this._controller();
         inflight.add(c);
         const t0 = this.now();
+        const sent = size;
         try {
           await transfer(size, onBytes, c.signal);
           errors = 0;
@@ -283,6 +289,7 @@ export class NetworkEngine {
           const factor = dt < settings.targetRequestMs / 4 ? 4 : 2;
           size = Math.min(size * factor, settings.maxBytes);
         }
+        size = capChunk(size, sent, dt, settings);
       }
     };
 
@@ -336,6 +343,20 @@ export function makePayload(totalBytes) {
     parts.push(left >= block.length ? block : block.subarray(0, left));
   }
   return new Blob(parts, { type: 'text/plain' });
+}
+
+/**
+ * Обмежує розмір наступного чанка за фактичною швидкістю потоку,
+ * щоб один запит не тривав довше maxRequestMs. Критично для upload:
+ * там байти зараховуються лише після завершення запиту, і чанк,
+ * що не встиг до кінця graceMs, пропадає повністю.
+ */
+export function capChunk(size, lastBytes, lastMs, settings) {
+  const { maxRequestMs, initialBytes } = settings;
+  if (!maxRequestMs || lastMs <= 0) return size;
+  const rate = lastBytes / lastMs; // байт/мс цього потоку
+  const limit = Math.floor(rate * maxRequestMs);
+  return Math.max(initialBytes, Math.min(size, limit));
 }
 
 function downsample(points, max) {

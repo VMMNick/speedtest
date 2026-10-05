@@ -31,6 +31,7 @@ export const CONFIG = Object.freeze({
     initialBytes: 100_000,
     maxBytes: 50_000_000,
     targetRequestMs: 1000, // розмір чанка росте, доки запит не триватиме ~1с
+    maxRequestMs: 3000, // за фактичною швидкістю — запит не довший за це
     abortAtDeadline: true, // частково завантажені байти вже враховані
   },
 
@@ -41,6 +42,7 @@ export const CONFIG = Object.freeze({
     initialBytes: 100_000,
     maxBytes: 20_000_000,
     targetRequestMs: 1000,
+    maxRequestMs: 2000, // має бути < graceMs, інакше останній чанк може пропасти
     abortAtDeadline: false, // байти зараховуються лише після завершення запиту
     graceMs: 4000, // жорсткий таймаут після дедлайну
   },

@@ -6,11 +6,13 @@
  *                                         ▼
  *        UIController / ChartManager ◄── app.js ──► StorageManager
  */
-import { UIController } from './ui/UIController.js';
+import { UIController, formatMbps, formatMs } from './ui/UIController.js';
 import { ChartManager } from './ui/ChartManager.js';
 import { ThemeManager } from './ui/ThemeManager.js';
 import { StorageManager } from './services/StorageManager.js';
 import { ServerSelector } from './services/ServerSelector.js';
+
+const PHASE_NAMES = { ping: 'Пінг', download: 'Завантаження', upload: 'Вивантаження' };
 
 const ui = new UIController();
 const charts = new ChartManager();
@@ -64,7 +66,9 @@ function bindEvents() {
   document.getElementById('btn-export').addEventListener('click', exportCSV);
 
   document.addEventListener('keydown', (e) => {
-    if (e.target.closest('input, textarea, dialog[open]')) return;
+    // Enter/Space на кнопці чи посиланні — це їхній власний клік, не старт тесту
+    if (e.target.closest('input, textarea, select, button, a, [contenteditable], dialog[open]')) return;
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Enter' && !running) startTest();
     if (e.key === 'Escape' && running) stopTest();
   });
@@ -124,6 +128,7 @@ function handleMessage(msg) {
   switch (msg.type) {
     case 'phase':
       ui.setPhase(msg.phase);
+      ui.announce(`${PHASE_NAMES[msg.phase]}…`);
       ['ping', 'download', 'upload'].forEach((m) => ui.setMetricLive(m, m === msg.phase));
       ui.setMetricLive('jitter', msg.phase === 'ping');
       break;
@@ -144,6 +149,11 @@ function handleMessage(msg) {
 
     case 'result':
       ui.setMetricLive(msg.phase, false);
+      ui.announce(
+        msg.phase === 'ping'
+          ? `Пінг ${formatMs(msg.data.median)} мс, джиттер ${formatMs(msg.data.jitter)} мс`
+          : `${PHASE_NAMES[msg.phase]}: ${formatMbps(msg.data.mbps)} Мбіт/с`,
+      );
       if (msg.phase === 'ping') {
         ui.setMetricLive('jitter', false);
         ui.setMetric('ping', msg.data.median);
@@ -174,6 +184,7 @@ function handleMessage(msg) {
 async function onDone(results) {
   results.server = { ...results.server, latency: selected?.latency ?? null };
   ui.showResults(results);
+  ui.announce(`Тест завершено. Оцінка стабільності ${results.stability.grade}, ${results.stability.score} зі 100`);
   ui.setPhase('done');
   ui.setPhaseProgress(1);
   ui.setGaugeValue(results.download.mbps);

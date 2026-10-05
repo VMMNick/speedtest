@@ -332,6 +332,15 @@ export class UIController {
     );
   }
 
+  /** Озвучення для скрінрідерів — лише підсумки фаз, не кожен кадр датчика. */
+  announce(text) {
+    const el = document.getElementById('sr-announcer');
+    if (!el) return;
+    el.textContent = '';
+    // Пауза, щоб однаковий текст поспіль теж був озвучений
+    setTimeout(() => (el.textContent = text), 50);
+  }
+
   // ───────────── Тости ─────────────
 
   toast(message, kind = 'info', ttl = 4500) {
