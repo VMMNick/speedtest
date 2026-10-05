@@ -435,14 +435,57 @@ export class UIController {
 
   // ───────────── Тости ─────────────
 
-  toast(message, kind = 'info', ttl = 4500) {
+  /**
+   * @param {string} message
+   * @param {'info' | 'success' | 'error'} [kind]
+   * @param {number} [ttl] мс; 0 — не зникає сам
+   * @param {{ label: string, onClick: () => void }} [action] кнопка в тості
+   */
+  toast(message, kind = 'info', ttl = 4500, action = undefined) {
     const t = document.createElement('div');
     t.className = `toast toast--${kind}`;
-    t.textContent = message;
-    this.el.toasts.append(t);
-    setTimeout(() => {
+    const text = document.createElement('span');
+    text.textContent = message;
+    t.append(text);
+    const close = () => {
       t.classList.add('is-leaving');
       setTimeout(() => t.remove(), 300);
-    }, ttl);
+    };
+    if (action) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'toast__action';
+      btn.textContent = action.label;
+      btn.addEventListener('click', () => {
+        close();
+        action.onClick();
+      });
+      t.append(btn);
+    }
+    this.el.toasts.append(t);
+    if (ttl > 0) setTimeout(close, ttl);
+  }
+
+  // ───────────── Результат із посилання ─────────────
+
+  /** @param {import('../core/share.js').SharedResult} d */
+  showShared(d) {
+    document.body.classList.add('is-shared');
+    const when = new Date(d.t).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' });
+    $('#shared-meta').textContent = ` (${[when, d.n].filter(Boolean).join(' · ')})`;
+    $('#shared-banner').hidden = false;
+    const note = 'з посилання';
+    this.setMetric('download', d.d, note);
+    this.setMetric('upload', d.u, note);
+    this.setMetric('ping', d.p, note);
+    this.setMetric('jitter', d.j, note);
+    this.setMetric('loss', d.l, note);
+    this.setMetric('stability', d.s, `Оцінка ${d.g}`);
+    $('[data-metric="stability"]').dataset.grade = d.g;
+  }
+
+  hideShared() {
+    document.body.classList.remove('is-shared');
+    $('#shared-banner').hidden = true;
   }
 }

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 import csp from './config/vite-plugin-csp.js';
+import serviceWorker from './config/vite-plugin-sw.js';
 
 const r = (p) => fileURLToPath(new URL(p, import.meta.url));
 
@@ -8,7 +9,7 @@ export default defineConfig({
   // Для GitHub Pages сайт живе в підкаталозі (/speedtest/) — задається в CI через BASE_PATH
   base: process.env.BASE_PATH || '/',
   root: r('./src'),
-  plugins: [csp()],
+  plugins: [csp(), serviceWorker({ publicDir: r('./public') })],
   publicDir: r('./public'),
   build: {
     outDir: r('./dist'),

@@ -14,6 +14,7 @@ import { ThemeManager } from './ui/ThemeManager.js';
 import { StorageManager } from './services/StorageManager.js';
 import { LIGHT_CONFIG, detectLightMode, mergeDeep } from './core/config.js';
 import { compareResults, filterByPeriod } from './core/insights.js';
+import { parseShareHash, shareUrl } from './core/share.js';
 import { ServerSelector } from './services/ServerSelector.js';
 
 const PHASE_NAMES = { ping: 'Пінг', download: 'Завантаження', upload: 'Вивантаження' };
@@ -82,7 +83,10 @@ async function init() {
   }
   await storage.init();
   bindEvents();
+  bindShare();
+  showSharedFromUrl();
   detectServer();
+  registerServiceWorker();
 }
 
 async function detectServer() {
@@ -178,6 +182,7 @@ async function startTest() {
   }
   running = true;
   pingLive = [];
+  hideShared();
   ui.setRunning(true);
   unlockAudio(); // синхронно, поки діє жест користувача
   (await loadCharts())?.resetLive();
@@ -363,6 +368,116 @@ function playChime() {
     osc.start(t + i * 0.09);
     osc.stop(t + i * 0.09 + 0.55);
   });
+}
+
+// ───────────── Поділитися ─────────────
+
+/** Результат із посилання (#r=…) показується одразу при відкритті */
+function showSharedFromUrl() {
+  const shared = parseShareHash(location.hash);
+  if (shared === undefined) return;
+  if (shared === null) {
+    ui.toast('Посилання на результат пошкоджене', 'error');
+    return;
+  }
+  ui.showShared(shared);
+}
+
+function hideShared() {
+  ui.hideShared();
+  if (location.hash.startsWith('#r=')) history.replaceState(null, '', location.pathname + location.search);
+}
+
+/** Мінімальні дані для картки з повного результату */
+const toShared = (r) => ({
+  t: r.timestamp,
+  d: r.download.mbps,
+  u: r.upload.mbps,
+  p: r.ping.median,
+  j: r.ping.jitter,
+  l: r.ping.loss,
+  s: r.stability.score,
+  g: r.stability.grade,
+  n: r.server?.name,
+});
+
+async function makeImage() {
+  const { renderShareCard, canvasToPng } = await import('./ui/ShareCard.js');
+  return canvasToPng(await renderShareCard(toShared(lastResult)));
+}
+
+function bindShare() {
+  const shareBtn = document.getElementById('btn-share');
+  // Web Share API є переважно на мобільних — там це найзручніший варіант
+  shareBtn.hidden = !('share' in navigator);
+  shareBtn.addEventListener('click', async () => {
+    if (!lastResult) return;
+    const url = shareUrl(lastResult, location.href);
+    const text = `Мій інтернет: ↓ ${formatMbps(lastResult.download.mbps)} / ↑ ${formatMbps(lastResult.upload.mbps)} Мбіт/с, пінг ${formatMs(lastResult.ping.median)} мс`;
+    try {
+      const file = new File([await makeImage()], 'speedtest.png', { type: 'image/png' });
+      const withFile = { title: 'Спідтест', text, url, files: [file] };
+      await navigator.share(navigator.canShare?.(withFile) ? withFile : { title: 'Спідтест', text, url });
+    } catch (e) {
+      if (e?.name !== 'AbortError') ui.toast('Не вдалося поділитися', 'error');
+    }
+  });
+
+  document.getElementById('btn-copy-link').addEventListener('click', async () => {
+    if (!lastResult) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl(lastResult, location.href));
+      ui.toast('Посилання скопійовано', 'success');
+    } catch {
+      ui.toast('Не вдалося скопіювати посилання', 'error');
+    }
+  });
+
+  document.getElementById('btn-save-image').addEventListener('click', async () => {
+    if (!lastResult) return;
+    const blob = await makeImage();
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: `speedtest-${new Date(lastResult.timestamp).toISOString().slice(0, 16).replace(/[:T]/g, '-')}.png`,
+    });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  document.getElementById('btn-shared-close').addEventListener('click', hideShared);
+  // Посилання вставили у вже відкриту вкладку — сторінка не перезавантажується, лише змінюється hash
+  window.addEventListener('hashchange', () => !running && showSharedFromUrl());
+}
+
+// ───────────── PWA ─────────────
+
+/** Service worker лише в продакшн-збірці: у dev він заважав би HMR */
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
+  let updateRequested = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // Перезавантажуємо лише якщо користувач сам натиснув «Оновити» (і не посеред тесту)
+    if (updateRequested && !running) location.reload();
+  });
+  navigator.serviceWorker
+    .register(`${import.meta.env.BASE_URL}sw.js`)
+    .then((reg) => {
+      reg.addEventListener('updatefound', () => {
+        const next = reg.installing;
+        next?.addEventListener('statechange', () => {
+          if (next.state === 'installed' && navigator.serviceWorker.controller) {
+            ui.toast('Доступна нова версія', 'info', 0, {
+              label: 'Оновити',
+              onClick: () => {
+                updateRequested = true;
+                next.postMessage({ type: 'SKIP_WAITING' });
+              },
+            });
+          }
+        });
+      });
+    })
+    .catch((e) => console.warn('Service worker не зареєстровано', e));
 }
 
 init();

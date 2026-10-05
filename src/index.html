@@ -22,6 +22,10 @@
       })();
     </script>
     <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Спідтест" />
     <link rel="icon" href="/assets/icons/speedometer.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://speed.cloudflare.com" crossorigin />
     <link rel="stylesheet" href="./styles/variables.css" />
@@ -52,6 +56,16 @@
         </button>
       </nav>
     </header>
+
+    <section class="shared-banner card" id="shared-banner" hidden aria-live="polite">
+      <p>
+        <strong>Результат, яким з вами поділились</strong>
+        <span id="shared-meta"></span>. Натисніть «Старт», щоб перевірити свій інтернет.
+      </p>
+      <button class="icon-btn icon-btn--sm" type="button" id="btn-shared-close" title="Сховати">
+        <span aria-hidden="true">✕</span><span class="sr-only">Сховати</span>
+      </button>
+    </section>
 
     <main id="main" class="layout">
       <section class="server-bar card" aria-label="Інформація про з'єднання">
@@ -216,6 +230,12 @@
           </div>
         </dl>
         <ul class="usecases" id="usecases"></ul>
+
+        <div class="share" role="group" aria-label="Поділитися результатом">
+          <button class="btn" type="button" id="btn-share" hidden>Поділитися…</button>
+          <button class="btn" type="button" id="btn-copy-link">Скопіювати посилання</button>
+          <button class="btn btn--ghost" type="button" id="btn-save-image">Зберегти картинку</button>
+        </div>
 
         <div class="plan">
           <label class="plan__label" for="plan-input">Тариф провайдера</label>
