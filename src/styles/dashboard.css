@@ -1,0 +1,430 @@
+/* Приладова панель: сервер, датчик, метрики, графік, підсумок */
+
+.layout {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'server'
+    'gauge'
+    'metrics'
+    'chart'
+    'summary';
+}
+.server-bar { grid-area: server; }
+.gauge-panel { grid-area: gauge; }
+.metrics { grid-area: metrics; }
+.chart-card { grid-area: chart; }
+.summary { grid-area: summary; }
+
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'server server'
+      'gauge metrics'
+      'chart chart'
+      'summary summary';
+  }
+}
+
+/* ───── Сервер ───── */
+.server-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 24px;
+  padding: 14px 20px;
+}
+.server-bar__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.server-bar__item .icon {
+  color: var(--color-download);
+}
+.server-bar__item .value {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ───── Датчик ───── */
+.gauge-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 20px;
+}
+
+.gauge {
+  position: relative;
+  width: min(100%, 380px);
+  aspect-ratio: 1;
+}
+.gauge__svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.gauge__track,
+.gauge__progress {
+  fill: none;
+  stroke-width: 16;
+  stroke-linecap: round;
+}
+.gauge__track {
+  stroke: var(--gauge-track);
+}
+.gauge__progress {
+  stroke: url(#gauge-grad-download);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-download) 50%, transparent));
+}
+.gauge[data-phase='upload'] .gauge__progress {
+  stroke: url(#gauge-grad-upload);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-upload) 50%, transparent));
+}
+.gauge[data-phase='ping'] .gauge__progress {
+  stroke: var(--color-ping);
+  filter: none;
+}
+
+.gauge__ticks line {
+  stroke: var(--color-text-muted);
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+.gauge__ticks text {
+  fill: var(--color-text-muted);
+  font: 500 10px var(--font-mono);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.gauge__needle {
+  transform-origin: 150px 150px;
+  transform: rotate(-135deg);
+  fill: var(--color-text);
+  transition: opacity var(--dur);
+}
+.gauge__needle circle {
+  fill: var(--color-surface);
+  stroke: var(--color-text);
+  stroke-width: 3;
+}
+
+.gauge__readout {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12%;
+  text-align: center;
+  transition: opacity var(--dur);
+}
+.gauge__phase {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+.gauge[data-phase='download'] .gauge__phase { color: var(--color-download); }
+.gauge[data-phase='upload'] .gauge__phase { color: var(--color-upload); }
+.gauge[data-phase='ping'] .gauge__phase { color: var(--color-ping); }
+.gauge__value {
+  font-size: clamp(36px, 9vw, 52px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.gauge__unit {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* У стані очікування — велика кнопка по центру, без стрілки */
+.gauge[data-phase='idle'] .gauge__readout,
+.gauge[data-phase='connecting'] .gauge__readout,
+.gauge[data-phase='idle'] .gauge__needle {
+  opacity: 0;
+}
+
+.start-btn {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 44%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, var(--color-download-2), var(--color-download));
+  color: #fff;
+  font-size: clamp(20px, 5vw, 28px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 40px color-mix(in srgb, var(--color-download) 45%, transparent);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
+}
+.start-btn:hover {
+  transform: scale(1.04);
+}
+.start-btn:active {
+  transform: scale(0.97);
+}
+.start-btn__ring {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid var(--color-download);
+  opacity: 0.5;
+  animation: pulse 2.2s var(--ease-out) infinite;
+}
+@keyframes pulse {
+  0% { transform: scale(0.95); opacity: 0.6; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .start-btn__ring { animation: none; }
+}
+
+/* Після тесту кнопка стає маленькою під показником */
+.gauge[data-phase='done'] .start-btn {
+  inset: auto 0 4% 0;
+  width: auto;
+  aspect-ratio: auto;
+  height: 40px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-size: 14px;
+  justify-self: center;
+  margin: 0 auto;
+  display: block;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-download) 35%, transparent);
+}
+.gauge[data-phase='done'] .start-btn__ring { display: none; }
+.gauge[data-phase='done'] .gauge__readout { bottom: 19%; }
+
+/* Прогрес фаз */
+.phase-progress {
+  width: min(100%, 380px);
+  height: 4px;
+  border-radius: 4px;
+  background: var(--gauge-track);
+  overflow: hidden;
+}
+.phase-progress__bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-ping), var(--color-download), var(--color-upload));
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 0.3s linear;
+}
+
+.phase-steps {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.phase-steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.phase-steps li::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border);
+  transition: background-color var(--dur);
+}
+.phase-steps li.is-active {
+  color: var(--color-text);
+  font-weight: 600;
+}
+.phase-steps li.is-active::before {
+  background: var(--color-download);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-download) 25%, transparent);
+}
+.phase-steps li.is-done::before {
+  background: var(--color-success);
+}
+
+/* ───── Метрики ───── */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+@media (min-width: 600px) and (max-width: 899px) {
+  .metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.metric {
+  position: relative;
+  padding: 16px;
+  overflow: hidden;
+}
+.metric__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.metric__value {
+  margin-top: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.metric__value .mono {
+  font-size: clamp(24px, 4vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.metric__value small {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+.metric__sub {
+  min-height: 1.5em;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric[data-metric='download'] .icon { color: var(--color-download); }
+.metric[data-metric='upload'] .icon { color: var(--color-upload); }
+.metric[data-metric='ping'] .icon,
+.metric[data-metric='jitter'] .icon { color: var(--color-ping); }
+.metric[data-metric='loss'] .icon { color: var(--color-danger); }
+.metric[data-metric='stability'] .icon { color: var(--color-success); }
+
+/* Індикатор «зараз вимірюється» */
+.metric::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, transparent, var(--color-download), transparent);
+  transform: translateX(-100%);
+  opacity: 0;
+}
+.metric.is-live::after {
+  opacity: 1;
+  animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer {
+  to { transform: translateX(100%); }
+}
+
+.metric[data-grade='A'] [data-value],
+.metric[data-grade='B'] [data-value] { color: var(--color-success); }
+.metric[data-grade='C'] [data-value] { color: var(--color-warning); }
+.metric[data-grade='D'] [data-value],
+.metric[data-grade='F'] [data-value] { color: var(--color-danger); }
+
+/* ───── Графік ───── */
+.chart-card {
+  padding: 18px 20px;
+}
+.chart-wrap {
+  position: relative;
+  height: 240px;
+}
+
+/* ───── Підсумок ───── */
+.summary {
+  padding: 18px 20px;
+}
+.summary__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.summary__grid div {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--color-surface-2);
+}
+.summary__grid dt {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.summary__grid dd {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.grade {
+  display: inline-grid;
+  place-items: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  border-radius: 12px;
+  font: 700 20px var(--font-mono);
+  background: var(--color-surface-2);
+}
+.grade--sm {
+  min-width: 28px;
+  height: 28px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+.grade[data-grade='A'],
+.grade[data-grade='B'] {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 14%, transparent);
+}
+.grade[data-grade='C'] {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 14%, transparent);
+}
+.grade[data-grade='D'],
+.grade[data-grade='F'] {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+}
+
+.usecases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.usecases li {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+}
+.usecases li.ok {
+  color: var(--color-success);
+  border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
+}
+.usecases li.bad {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+  opacity: 0.8;
+}

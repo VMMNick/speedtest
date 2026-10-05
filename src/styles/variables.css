@@ -1,0 +1,67 @@
+/* Дизайн-токени. Кольори для графіків — лише 6-значний HEX (ChartManager додає альфу). */
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  --radius-sm: 8px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --space: 16px;
+  --maxw: 1100px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 0.25s;
+
+  /* Світла тема */
+  --color-bg: #f4f6fb;
+  --color-bg-accent: #e7ecf8;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f3fa;
+  --color-border: #dfe4ef;
+  --color-text: #141a2e;
+  --color-text-muted: #5d6680;
+  --color-grid: #e3e7f0;
+
+  --color-download: #2563eb;
+  --color-download-2: #06b6d4;
+  --color-upload: #9333ea;
+  --color-upload-2: #ec4899;
+  --color-ping: #d97706;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+
+  --shadow: 0 1px 2px rgb(20 26 46 / 0.04), 0 8px 24px rgb(20 26 46 / 0.06);
+  --gauge-track: #e6eaf3;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --color-bg: #0b1020;
+  --color-bg-accent: #121a33;
+  --color-surface: #121933;
+  --color-surface-2: #182143;
+  --color-border: #232d52;
+  --color-text: #e8ecf8;
+  --color-text-muted: #8f9abb;
+  --color-grid: #1f2849;
+
+  --color-download: #38bdf8;
+  --color-download-2: #22d3ee;
+  --color-upload: #c084fc;
+  --color-upload-2: #f472b6;
+  --color-ping: #fbbf24;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px rgb(0 0 0 / 0.35);
+  --gauge-track: #1c2546;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 0s;
+  }
+}

@@ -1,0 +1,110 @@
+/* Модалка історії */
+.modal {
+  width: min(900px, calc(100vw - 24px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.35);
+}
+.modal[open] {
+  animation: modal-in 0.3s var(--ease-out);
+}
+.modal::backdrop {
+  background: rgb(5 8 20 / 0.55);
+  backdrop-filter: blur(4px);
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+}
+
+.modal__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  max-height: calc(100vh - 50px);
+}
+.modal__head,
+.modal__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.modal__head h2 {
+  font-size: 18px;
+}
+.modal__foot {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.history-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.history-stats:empty {
+  display: none;
+}
+.history-stats div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-surface-2);
+}
+.history-stats strong {
+  font-size: 15px;
+}
+
+.chart-wrap--history {
+  height: 200px;
+  flex: none;
+}
+
+.table-wrap {
+  overflow: auto;
+  min-height: 80px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.history-table th,
+.history-table td {
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-border);
+}
+.history-table th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface-2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.history-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.history-table tbody tr:hover {
+  background: var(--color-surface-2);
+}
+
+.empty {
+  margin: 0;
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+}

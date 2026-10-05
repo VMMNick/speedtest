@@ -1,0 +1,353 @@
+/**
+ * NetworkEngine — рушій вимірювань: пінг, завантаження, вивантаження.
+ *
+ * Не залежить від DOM: працює у Web Worker або в Node (тести).
+ * Усі побічні ефекти (fetch, upload, таймер) можна підмінити через конструктор.
+ */
+import { CONFIG } from './config.js';
+import * as M from './MetricsCalculator.js';
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const isAbort = (e) => e?.name === 'AbortError';
+
+/** Вивантаження через fetch. Content-Type text/plain → «простий» CORS-запит без preflight. */
+export async function fetchUpload(fetchImpl, url, body, onBytes, signal) {
+  const res = await fetchImpl(url, {
+    method: 'POST',
+    body,
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    cache: 'no-store',
+    signal,
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  await res.arrayBuffer().catch(() => {});
+  onBytes(body.size ?? body.byteLength ?? 0);
+}
+
+export class NetworkEngine {
+  /**
+   * @param {object} opts
+   * @param {object} opts.server   — елемент із SERVERS
+   * @param {object} [opts.config] — перевизначення CONFIG
+   * @param {Function} [opts.fetchImpl]
+   * @param {Function} [opts.uploadImpl] (url, blob, onBytes, signal) => Promise
+   * @param {Function} [opts.now]
+   * @param {Function} [opts.onEvent] — колбек подій прогресу
+   * @param {Performance} [opts.perf] — для точних Resource Timing (у воркері)
+   */
+  constructor({ server, config = {}, fetchImpl, uploadImpl, now, onEvent, perf } = {}) {
+    if (!server) throw new Error('NetworkEngine: server is required');
+    this.server = server;
+    this.cfg = mergeDeep(CONFIG, config);
+    this.fetch = fetchImpl ?? globalThis.fetch.bind(globalThis);
+    this.upload = uploadImpl ?? ((url, body, onBytes, signal) => fetchUpload(this.fetch, url, body, onBytes, signal));
+    this.now = now ?? (() => performance.now());
+    this.emit = onEvent ?? (() => {});
+    this.perf = perf ?? null;
+    this.aborted = false;
+    this.controllers = new Set();
+    this.pingCounter = 0;
+  }
+
+  /** Зупиняє всі активні запити. */
+  abort() {
+    this.aborted = true;
+    for (const c of this.controllers) c.abort();
+    this.controllers.clear();
+  }
+
+  _controller() {
+    const c = new AbortController();
+    this.controllers.add(c);
+    return c;
+  }
+
+  _release(c) {
+    this.controllers.delete(c);
+  }
+
+  _checkAbort() {
+    if (this.aborted) throw new DOMException('Test aborted', 'AbortError');
+  }
+
+  /** Повний цикл: пінг → download → upload. */
+  async run() {
+    const startedAt = Date.now();
+    this.emit({ type: 'phase', phase: 'ping' });
+    const ping = await this.measurePing();
+    this._checkAbort();
+    this.emit({ type: 'result', phase: 'ping', data: ping });
+
+    this.emit({ type: 'phase', phase: 'download' });
+    const download = await this.measureDownload();
+    this._checkAbort();
+    this.emit({ type: 'result', phase: 'download', data: download });
+
+    this.emit({ type: 'phase', phase: 'upload' });
+    const upload = await this.measureUpload();
+    this._checkAbort();
+    this.emit({ type: 'result', phase: 'upload', data: upload });
+
+    const loadedPing = Math.max(download.loadedLatency.median, upload.loadedLatency.median);
+    const bloat = M.bufferbloat(ping.median, loadedPing);
+    const speedCv = (M.variation(download.speeds) + M.variation(upload.speeds)) / 2;
+    const stability = M.stabilityScore({
+      ping: ping.median,
+      jitter: ping.jitter,
+      loss: ping.loss,
+      bloatMs: bloat.delta,
+      speedCv,
+    });
+
+    return {
+      timestamp: startedAt,
+      durationMs: Date.now() - startedAt,
+      server: { id: this.server.id, name: this.server.name },
+      ping,
+      download,
+      upload,
+      bufferbloat: bloat,
+      stability,
+      useCases: M.useCases({
+        download: download.mbps,
+        upload: upload.mbps,
+        ping: ping.median,
+        jitter: ping.jitter,
+        loss: ping.loss,
+      }),
+    };
+  }
+
+  // ───────────────────────────── PING ─────────────────────────────
+
+  /** Один пінг. Повертає RTT у мс або null (втрата/таймаут). */
+  async singlePing(timeoutMs = this.cfg.ping.timeoutMs) {
+    const c = this._controller();
+    const timer = setTimeout(() => c.abort(), timeoutMs);
+    const sep = this.server.pingUrl.includes('?') ? '&' : '?';
+    const url = `${this.server.pingUrl}${sep}_=${++this.pingCounter}`;
+    const t0 = this.now();
+    try {
+      const res = await this.fetch(url, { cache: 'no-store', signal: c.signal });
+      await res.arrayBuffer();
+      const wall = this.now() - t0;
+      return this._resourceTiming(url) ?? wall;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+      this._release(c);
+    }
+  }
+
+  /**
+   * Точніший RTT із Resource Timing API (без накладних витрат JS).
+   * Працює, якщо сервер віддає Timing-Allow-Origin.
+   */
+  _resourceTiming(url) {
+    if (!this.perf?.getEntriesByName) return null;
+    const entries = this.perf.getEntriesByName(url);
+    const e = entries[entries.length - 1];
+    if (this.perf.clearResourceTimings && this.pingCounter % 50 === 0) this.perf.clearResourceTimings();
+    if (!e || !e.requestStart || !e.responseStart) return null;
+    const rtt = e.responseStart - e.requestStart;
+    return rtt > 0 ? rtt : null;
+  }
+
+  async measurePing() {
+    const { count, intervalMs, warmup } = this.cfg.ping;
+    for (let i = 0; i < warmup; i++) await this.singlePing();
+
+    const rtts = [];
+    for (let i = 0; i < count; i++) {
+      this._checkAbort();
+      const rtt = await this.singlePing();
+      if (rtt !== null) rtts.push(rtt);
+      this.emit({
+        type: 'progress',
+        phase: 'ping',
+        value: rtt,
+        progress: (i + 1) / count,
+      });
+      if (intervalMs) await sleep(intervalMs);
+    }
+    if (!rtts.length) throw new Error('Сервер недоступний: жоден пінг не повернувся');
+    return M.summarizeLatency(rtts, count);
+  }
+
+  // ───────────────────────── THROUGHPUT ─────────────────────────
+
+  async measureDownload() {
+    return this._measureThroughput('download', this.cfg.download, (bytes, onBytes, signal) =>
+      this._downloadChunk(bytes, onBytes, signal),
+    );
+  }
+
+  async measureUpload() {
+    const settings = this.cfg.upload;
+    const payload = makePayload(settings.maxBytes);
+    return this._measureThroughput('upload', settings, (bytes, onBytes, signal) =>
+      this.upload(this.server.uploadUrl, payload.slice(0, bytes, 'text/plain'), onBytes, signal),
+    );
+  }
+
+  async _downloadChunk(bytes, onBytes, signal) {
+    const res = await this.fetch(`${this.server.downloadUrl}?bytes=${bytes}`, { cache: 'no-store', signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.body?.getReader) {
+      const buf = await res.arrayBuffer();
+      onBytes(buf.byteLength);
+      return;
+    }
+    const reader = res.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      onBytes(value.byteLength);
+    }
+  }
+
+  /**
+   * Універсальне вимірювання пропускної здатності:
+   * кілька паралельних потоків з адаптивним розміром чанка + семплування кожні N мс
+   * + паралельний пінг під навантаженням.
+   */
+  async _measureThroughput(phase, settings, transfer) {
+    const start = this.now();
+    const deadline = start + settings.durationMs;
+    const samples = [{ t: 0, bytes: 0 }];
+    let totalBytes = 0;
+    let streamsDone = false;
+    let lastError = null;
+
+    const onBytes = (n) => {
+      totalBytes += n;
+    };
+
+    const tick = () => {
+      const t = this.now() - start;
+      samples.push({ t, bytes: totalBytes });
+      const mbps = M.liveSpeed(samples, this.cfg.liveWindowMs);
+      this.emit({
+        type: 'progress',
+        phase,
+        value: mbps,
+        t,
+        progress: Math.min(1, t / settings.durationMs),
+      });
+    };
+    const ticker = setInterval(tick, this.cfg.sampleIntervalMs);
+
+    // Дедлайн: download обриває запити одразу, upload дає їм завершитись (з запасом graceMs)
+    const inflight = new Set();
+    const stopAt = settings.abortAtDeadline ? settings.durationMs : settings.durationMs + (settings.graceMs ?? 0);
+    const killer = setTimeout(() => inflight.forEach((c) => c.abort()), stopAt);
+
+    // Пінг під навантаженням
+    const loaded = [];
+    let loadedSent = 0;
+    const latencyLoop = (async () => {
+      await sleep(Math.min(this.cfg.warmupMs, settings.durationMs / 4));
+      while (!streamsDone && !this.aborted && this.now() < deadline) {
+        loadedSent++;
+        const rtt = await this.singlePing(this.cfg.loadedLatency.timeoutMs);
+        if (rtt !== null) loaded.push(rtt);
+        await sleep(this.cfg.loadedLatency.intervalMs);
+      }
+    })();
+
+    const stream = async () => {
+      let size = settings.initialBytes;
+      let errors = 0;
+      while (!this.aborted && this.now() < deadline) {
+        const c = this._controller();
+        inflight.add(c);
+        const t0 = this.now();
+        try {
+          await transfer(size, onBytes, c.signal);
+          errors = 0;
+        } catch (e) {
+          if (isAbort(e)) break;
+          lastError = e;
+          // Після 3 помилок поспіль потік зупиняється; інші потоки продовжують
+          if (++errors >= 3) break;
+          await sleep(100 * errors);
+          continue;
+        } finally {
+          inflight.delete(c);
+          this._release(c);
+        }
+        const dt = this.now() - t0;
+        if (dt < settings.targetRequestMs) {
+          // Дуже швидкий запит → збільшуємо агресивніше
+          const factor = dt < settings.targetRequestMs / 4 ? 4 : 2;
+          size = Math.min(size * factor, settings.maxBytes);
+        }
+      }
+    };
+
+    try {
+      await Promise.all(Array.from({ length: settings.streams }, stream));
+    } finally {
+      streamsDone = true;
+      clearInterval(ticker);
+      clearTimeout(killer);
+    }
+    tick();
+    await latencyLoop;
+    this._checkAbort();
+    if (totalBytes === 0) {
+      throw new Error(`${phase === 'download' ? 'Завантаження' : 'Вивантаження'} не вдалося: ${lastError?.message ?? 'немає даних'}`);
+    }
+
+    const mbps = M.throughput(samples, this.cfg.warmupMs);
+    // Миттєві швидкості між семплами — для графіків та оцінки стабільності
+    const speeds = [];
+    for (let i = 1; i < samples.length; i++) {
+      const dt = samples[i].t - samples[i - 1].t;
+      if (dt > 0 && samples[i].t >= this.cfg.warmupMs) {
+        speeds.push(M.bytesToMbps(samples[i].bytes - samples[i - 1].bytes, dt));
+      }
+    }
+    const series = downsample(
+      samples.slice(1).map((s, i) => ({ t: s.t, mbps: M.liveSpeed(samples.slice(0, i + 2), this.cfg.liveWindowMs) })),
+      60,
+    );
+
+    return {
+      mbps,
+      bytes: totalBytes,
+      durationMs: samples[samples.length - 1].t,
+      speeds,
+      series,
+      loadedLatency: { ...M.summarizeLatency(loaded, loadedSent), samples: undefined },
+    };
+  }
+}
+
+/** Псевдовипадковий payload (нестискуваний), зібраний з 1 МБ блоку без копіювання. */
+export function makePayload(totalBytes) {
+  const block = new Uint8Array(1 << 20);
+  for (let i = 0; i < block.length; i += 65536) {
+    globalThis.crypto.getRandomValues(block.subarray(i, i + 65536));
+  }
+  const parts = [];
+  for (let left = totalBytes; left > 0; left -= block.length) {
+    parts.push(left >= block.length ? block : block.subarray(0, left));
+  }
+  return new Blob(parts, { type: 'text/plain' });
+}
+
+function downsample(points, max) {
+  if (points.length <= max) return points;
+  const step = points.length / max;
+  return Array.from({ length: max }, (_, i) => points[Math.floor(i * step)]);
+}
+
+function mergeDeep(base, extra) {
+  const out = { ...base };
+  for (const [k, v] of Object.entries(extra || {})) {
+    out[k] = v && typeof v === 'object' && !Array.isArray(v) ? mergeDeep(base[k] || {}, v) : v;
+  }
+  return out;
+}

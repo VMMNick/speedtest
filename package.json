@@ -1,0 +1,24 @@
+{
+  "name": "internet-speed-test",
+  "version": "1.0.0",
+  "description": "Браузерний тест швидкості інтернету: пінг, джиттер, download/upload, стабільність. Vanilla JS + Web Workers + Chart.js.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run --root .",
+    "test:watch": "vitest --root ."
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1"
+  },
+  "devDependencies": {
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

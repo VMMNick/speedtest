@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="uk" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Швидкий тест інтернет-з'єднання: пінг, джиттер, швидкість завантаження та вивантаження, стабільність." />
+    <meta name="theme-color" content="#0b1020" />
+    <title>Спідтест — перевірка швидкості інтернету</title>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/assets/icons/speedometer.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="preconnect" href="https://speed.cloudflare.com" crossorigin />
+    <link rel="stylesheet" href="./styles/variables.css" />
+    <link rel="stylesheet" href="./styles/main.css" />
+    <link rel="stylesheet" href="./styles/dashboard.css" />
+    <link rel="stylesheet" href="./styles/history.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Перейти до вмісту</a>
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="icon icon--lg" style="--icon: url(/assets/icons/speedometer.svg)" aria-hidden="true"></span>
+        <span class="brand__name">Спід<span>тест</span></span>
+      </div>
+      <nav class="topbar__actions" aria-label="Дії">
+        <button class="icon-btn" id="btn-sound" type="button" aria-pressed="true" title="Звук завершення">
+          <span class="icon" style="--icon: url(/assets/icons/sound.svg)" aria-hidden="true"></span>
+          <span class="sr-only">Звук завершення</span>
+        </button>
+        <button class="icon-btn" id="btn-history" type="button" title="Історія тестів">
+          <span class="icon" style="--icon: url(/assets/icons/history.svg)" aria-hidden="true"></span>
+          <span class="sr-only">Історія тестів</span>
+        </button>
+        <button class="icon-btn" id="btn-theme" type="button" title="Змінити тему">
+          <span class="icon icon--theme" aria-hidden="true"></span>
+          <span class="sr-only">Змінити тему</span>
+        </button>
+      </nav>
+    </header>
+
+    <main id="main" class="layout">
+      <section class="server-bar card" aria-label="Інформація про з'єднання">
+        <div class="server-bar__item">
+          <span class="icon" style="--icon: url(/assets/icons/pin.svg)" aria-hidden="true"></span>
+          <div>
+            <div class="label">Сервер</div>
+            <div class="value" id="server-name">Визначаю…</div>
+          </div>
+        </div>
+        <div class="server-bar__item">
+          <span class="icon" style="--icon: url(/assets/icons/wifi.svg)" aria-hidden="true"></span>
+          <div>
+            <div class="label">Провайдер</div>
+            <div class="value" id="server-isp">—</div>
+          </div>
+        </div>
+        <div class="server-bar__item">
+          <span class="icon" style="--icon: url(/assets/icons/globe.svg)" aria-hidden="true"></span>
+          <div>
+            <div class="label">IP-адреса</div>
+            <div class="value mono" id="server-ip">—</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="gauge-panel card" aria-label="Датчик швидкості">
+        <div class="gauge" id="gauge" data-phase="idle">
+          <svg class="gauge__svg" viewBox="0 0 300 300" role="img" aria-labelledby="gauge-title">
+            <title id="gauge-title">Поточна швидкість</title>
+            <defs>
+              <linearGradient id="gauge-grad-download" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0%" stop-color="var(--color-download-2)" />
+                <stop offset="100%" stop-color="var(--color-download)" />
+              </linearGradient>
+              <linearGradient id="gauge-grad-upload" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0%" stop-color="var(--color-upload-2)" />
+                <stop offset="100%" stop-color="var(--color-upload)" />
+              </linearGradient>
+            </defs>
+            <path class="gauge__track" id="gauge-track" pathLength="100" />
+            <path class="gauge__progress" id="gauge-progress" pathLength="100" stroke-dasharray="0 100" style="opacity: 0" />
+            <g id="gauge-ticks" class="gauge__ticks"></g>
+            <g class="gauge__needle" id="gauge-needle">
+              <path d="M150 150 L146 148 L150 52 L154 148 Z" />
+              <circle cx="150" cy="150" r="9" />
+            </g>
+          </svg>
+
+          <div class="gauge__readout" aria-live="polite">
+            <div class="gauge__phase" id="gauge-phase">Готовий</div>
+            <div class="gauge__value mono" id="gauge-value">0</div>
+            <div class="gauge__unit" id="gauge-unit">Мбіт/с</div>
+          </div>
+
+          <button class="start-btn" id="btn-start" type="button">
+            <span class="start-btn__ring" aria-hidden="true"></span>
+            <span class="start-btn__label">Старт</span>
+          </button>
+        </div>
+
+        <div class="phase-progress" aria-hidden="true">
+          <div class="phase-progress__bar" id="phase-progress"></div>
+        </div>
+        <ol class="phase-steps" id="phase-steps">
+          <li data-step="ping">Пінг</li>
+          <li data-step="download">Завантаження</li>
+          <li data-step="upload">Вивантаження</li>
+        </ol>
+        <button class="btn btn--ghost" id="btn-stop" type="button" hidden>Зупинити</button>
+      </section>
+
+      <section class="metrics" aria-label="Результати">
+        <article class="metric card" data-metric="download">
+          <header class="metric__head">
+            <span class="icon" style="--icon: url(/assets/icons/download.svg)" aria-hidden="true"></span>
+            Завантаження
+          </header>
+          <div class="metric__value"><span class="mono" data-value>—</span><small>Мбіт/с</small></div>
+          <div class="metric__sub" data-sub></div>
+        </article>
+        <article class="metric card" data-metric="upload">
+          <header class="metric__head">
+            <span class="icon" style="--icon: url(/assets/icons/upload.svg)" aria-hidden="true"></span>
+            Вивантаження
+          </header>
+          <div class="metric__value"><span class="mono" data-value>—</span><small>Мбіт/с</small></div>
+          <div class="metric__sub" data-sub></div>
+        </article>
+        <article class="metric card" data-metric="ping">
+          <header class="metric__head">
+            <span class="icon" style="--icon: url(/assets/icons/ping.svg)" aria-hidden="true"></span>
+            Пінг
+          </header>
+          <div class="metric__value"><span class="mono" data-value>—</span><small>мс</small></div>
+          <div class="metric__sub" data-sub></div>
+        </article>
+        <article class="metric card" data-metric="jitter">
+          <header class="metric__head">
+            <span class="icon" style="--icon: url(/assets/icons/jitter.svg)" aria-hidden="true"></span>
+            Джиттер
+          </header>
+          <div class="metric__value"><span class="mono" data-value>—</span><small>мс</small></div>
+          <div class="metric__sub" data-sub></div>
+        </article>
+        <article class="metric card" data-metric="loss">
+          <header class="metric__head">
+            <span class="icon" style="--icon: url(/assets/icons/loss.svg)" aria-hidden="true"></span>
+            Втрати
+          </header>
+          <div class="metric__value"><span class="mono" data-value>—</span><small>%</small></div>
+          <div class="metric__sub" data-sub></div>
+        </article>
+        <article class="metric card" data-metric="stability">
+          <header class="metric__head">
+            <span class="icon" style="--icon: url(/assets/icons/shield.svg)" aria-hidden="true"></span>
+            Стабільність
+          </header>
+          <div class="metric__value"><span class="mono" data-value>—</span><small>/100</small></div>
+          <div class="metric__sub" data-sub></div>
+        </article>
+      </section>
+
+      <section class="card chart-card" aria-label="Графік швидкості">
+        <header class="card__head">
+          <h2>Швидкість у реальному часі</h2>
+        </header>
+        <div class="chart-wrap"><canvas id="live-chart"></canvas></div>
+      </section>
+
+      <section class="card summary" id="summary" hidden aria-label="Підсумок">
+        <header class="card__head">
+          <h2>Підсумок</h2>
+          <span class="grade" id="summary-grade">—</span>
+        </header>
+        <dl class="summary__grid">
+          <div><dt>Пінг під навантаженням (↓)</dt><dd class="mono" id="sum-loaded-dl">—</dd></div>
+          <div><dt>Пінг під навантаженням (↑)</dt><dd class="mono" id="sum-loaded-ul">—</dd></div>
+          <div><dt>Bufferbloat</dt><dd class="mono" id="sum-bloat">—</dd></div>
+          <div><dt>Передано даних</dt><dd class="mono" id="sum-bytes">—</dd></div>
+        </dl>
+        <ul class="usecases" id="usecases"></ul>
+      </section>
+    </main>
+
+    <footer class="footer">
+      Вимірювання через <a href="https://speed.cloudflare.com" target="_blank" rel="noopener">Cloudflare</a>.
+      Результати залежать від браузера, Wi-Fi та навантаження мережі.
+    </footer>
+
+    <dialog class="modal" id="history-modal" aria-labelledby="history-title">
+      <div class="modal__inner">
+        <header class="modal__head">
+          <h2 id="history-title">Історія тестів</h2>
+          <button class="icon-btn" type="button" data-close title="Закрити">
+            <span aria-hidden="true">✕</span><span class="sr-only">Закрити</span>
+          </button>
+        </header>
+        <div class="history-stats" id="history-stats"></div>
+        <div class="chart-wrap chart-wrap--history"><canvas id="history-chart"></canvas></div>
+        <div class="table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th scope="col">Дата</th>
+                <th scope="col">↓ Мбіт/с</th>
+                <th scope="col">↑ Мбіт/с</th>
+                <th scope="col">Пінг</th>
+                <th scope="col">Джиттер</th>
+                <th scope="col">Оцінка</th>
+                <th scope="col"><span class="sr-only">Дії</span></th>
+              </tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+          </table>
+          <p class="empty" id="history-empty" hidden>Ще немає жодного тесту. Натисніть «Старт».</p>
+        </div>
+        <footer class="modal__foot">
+          <button class="btn btn--ghost" type="button" id="btn-export">Експорт CSV</button>
+          <button class="btn btn--danger" type="button" id="btn-clear">Очистити історію</button>
+        </footer>
+      </div>
+    </dialog>
+
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
