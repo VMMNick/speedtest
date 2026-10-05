@@ -24,7 +24,9 @@
     "build:self": "vite build --mode selfhosted",
     "server": "node server/src/index.js",
     "test:server": "npm --prefix server test",
-    "test:e2e:server": "playwright test -c playwright.server.config.js"
+    "test:e2e:server": "playwright test -c playwright.server.config.js",
+    "build:cloud": "vite build --mode cloud",
+    "test:e2e:cloud": "playwright test -c playwright.cloud.config.js"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

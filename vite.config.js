@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 import csp from './config/vite-plugin-csp.js';
 import serviceWorker from './config/vite-plugin-sw.js';
@@ -18,10 +18,10 @@ export default defineConfig(({ mode }) => ({
     emptyOutDir: true,
     target: 'es2022',
     // Не вбудовувати шрифти як data: URI — CSP дозволяє font-src лише 'self'
-    // Аналітика має сенс лише з бекендом — у звичайну збірку (GitHub Pages) вона не потрапляє
+    // Аналітика має сенс лише з бекендом (режими selfhosted і cloud) — на GitHub Pages її немає
     rollupOptions: {
       input:
-        mode === 'selfhosted'
+        loadEnv(mode, r('.'), 'VITE_').VITE_RESULTS_API === 'true'
           ? { main: r('./src/index.html'), analytics: r('./src/analytics.html') }
           : { main: r('./src/index.html') },
     },

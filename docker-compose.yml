@@ -39,7 +39,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     # Лише лічильники rate limit — зберігати на диск не потрібно
     command: ['redis-server', '--save', '', '--appendonly', 'no']
     healthcheck:

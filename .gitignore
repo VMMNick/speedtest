@@ -8,6 +8,7 @@ Thumbs.db
 .env*
 !.env.example
 !.env.selfhosted
+!.env.cloud
 playwright-report/
 test-results/
 blob-report/

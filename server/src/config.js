@@ -19,6 +19,12 @@ export function loadConfig(env = process.env) {
     staticDir: env.STATIC_DIR ? resolve(env.STATIC_DIR) : null, // @fastify/static потребує абсолютний шлях
     /** За reverse proxy (nginx, Traefik) — щоб request.ip брався з X-Forwarded-For */
     trustProxy: bool(env.TRUST_PROXY, false),
+    /**
+     * Ендпоінти download/upload. На безкоштовних хмарних тарифах (Render, Fly) їх варто
+     * вимкнути: тест ганяє сотні МБ і швидко з'їдає ліміт трафіку. Тоді міряємо через Cloudflare,
+     * а сервер лише збирає статистику.
+     */
+    speedEndpoints: bool(env.SPEED_ENDPOINTS, true),
     limits: {
       /** Максимальний розмір одного download/upload-запиту */
       maxTransferBytes: int(env.MAX_TRANSFER_BYTES, 100_000_000),

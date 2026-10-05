@@ -1,0 +1,56 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Dashboard → New → Blueprint → вибрати цей репозиторій. Render створить усі три сервіси.
+#
+# Безкоштовні тарифи: веб-сервіс засинає після 15 хв простою (перший запит ~1 хв),
+# безкоштовна PostgreSQL видаляється через 30 днів, Key Value не зберігається на диск.
+# Для постійної роботи змініть plan на платний.
+
+services:
+  - type: web
+    name: speedtest
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    # Деплой лише після зеленого CI на GitHub
+    autoDeployTrigger: checksPass
+    envVars:
+      # Хмарна збірка: міряємо через Cloudflare, сервер лише статистика + аналітика.
+      # Render передає змінні оточення в Docker як build args.
+      - key: BUILD_MODE
+        value: cloud
+      # Не роздаємо сотні МБ на тест із безкоштовного тарифу
+      - key: SPEED_ENDPOINTS
+        value: 'false'
+      # За проксі Render — справжня IP клієнта для rate limit
+      - key: TRUST_PROXY
+        value: 'true'
+      - key: DATABASE_URL
+        fromDatabase:
+          name: speedtest-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: speedtest-redis
+          type: keyvalue
+          property: connectionString
+
+  - type: keyvalue
+    name: speedtest-redis
+    plan: free
+    region: frankfurt
+    # Лише лічильники rate limit і кеш аналітики — старе можна викидати
+    maxmemoryPolicy: allkeys-lru
+    # Порожній список = доступ лише з приватної мережі Render
+    ipAllowList: []
+
+databases:
+  - name: speedtest-db
+    databaseName: speedtest
+    user: speedtest
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: '17'
+    ipAllowList: []

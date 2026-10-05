@@ -28,8 +28,17 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    ignore:
+      # Лишаємось на LTS-лінійці Node; мажорні оновлення — свідомо, вручну
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: docker-compose
     directory: /
     schedule:
       interval: monthly
+    ignore:
+      # Мажорна версія PostgreSQL потребує міграції даних (pg_upgrade/dump), а 18-й образ
+      # ще й змінив шлях даних у volume — оновлюємо вручну
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]

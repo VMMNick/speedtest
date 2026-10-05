@@ -186,3 +186,24 @@ describe('статика', () => {
     await app.close();
   });
 });
+
+describe('SPEED_ENDPOINTS=false (хмарний тариф)', () => {
+  it('download/upload вимкнені, ping/meta/результати працюють', async () => {
+    const app = await buildApp({ config: loadConfig({ SPEED_ENDPOINTS: 'false' }), logger: false });
+    expect((await app.inject('/api/download?bytes=100')).statusCode).toBe(404);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/api/upload',
+          headers: { 'content-type': 'text/plain' },
+          payload: 'x',
+        })
+      ).statusCode,
+    ).toBe(404);
+    expect((await app.inject('/api/ping')).statusCode).toBe(200);
+    expect((await app.inject('/api/meta')).statusCode).toBe(200);
+    expect((await app.inject({ method: 'POST', url: '/api/results', payload: validResult })).statusCode).toBe(201);
+    await app.close();
+  });
+});

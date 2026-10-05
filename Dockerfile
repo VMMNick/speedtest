@@ -7,11 +7,13 @@ FROM node:22-alpine AS web
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
-COPY vite.config.js .env.selfhosted ./
+# selfhosted — власні ендпоінти вимірювань (LAN/VPS); cloud — вимірювання через Cloudflare (Render)
+ARG BUILD_MODE=selfhosted
+COPY vite.config.js .env.selfhosted .env.cloud ./
 COPY config ./config
 COPY public ./public
 COPY src ./src
-RUN npm run build:self
+RUN npx vite build --mode "$BUILD_MODE"
 
 # ── 2. Продакшн-залежності сервера ─────────────────────────────────
 FROM node:22-alpine AS server-deps
@@ -34,7 +36,8 @@ COPY --from=web /app/dist ./dist
 
 # Не root
 USER node
+# Платформи на кшталт Render задають власний PORT — сервер і healthcheck його враховують
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:8080/api/health > /dev/null || exit 1
+  CMD wget -qO- "http://127.0.0.1:${PORT}/api/health" > /dev/null || exit 1
 CMD ["node", "server/src/index.js"]

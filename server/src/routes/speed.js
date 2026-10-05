@@ -25,8 +25,8 @@ export function* chunks(total, block = BLOCK) {
 
 const NO_STORE = 'no-store, no-cache, must-revalidate';
 
-/** @type {import('fastify').FastifyPluginAsync<{ maxTransferBytes: number, perMinute: number }>} */
-export default async function speedRoutes(app, { maxTransferBytes, perMinute }) {
+/** @type {import('fastify').FastifyPluginAsync<{ maxTransferBytes: number, perMinute: number, transfers?: boolean }>} */
+export default async function speedRoutes(app, { maxTransferBytes, perMinute, transfers = true }) {
   const rateLimit = { max: perMinute, timeWindow: '1 minute' };
 
   // Тіло upload не буферизується: рахуємо байти потоком і викидаємо.
@@ -55,6 +55,15 @@ export default async function speedRoutes(app, { maxTransferBytes, perMinute }) 
       .send('');
   });
 
+  app.get('/api/meta', { config: { rateLimit } }, async (request, reply) => {
+    reply.header('cache-control', NO_STORE);
+    // Формат як у speed.cloudflare.com/meta — фронтенду байдуже, хто відповідає
+    return { clientIp: request.ip, asOrganization: null, city: null, country: null, colo: 'SELF' };
+  });
+
+  // ping і meta — крихітні, лишаються завжди; download/upload — опційно (SPEED_ENDPOINTS)
+  if (!transfers) return;
+
   app.get(
     '/api/download',
     {
@@ -80,11 +89,5 @@ export default async function speedRoutes(app, { maxTransferBytes, perMinute }) 
     const bytes = /** @type {{ bytes?: number }} */ (request.body)?.bytes ?? 0;
     reply.header('cache-control', NO_STORE);
     return { bytes };
-  });
-
-  app.get('/api/meta', { config: { rateLimit } }, async (request, reply) => {
-    reply.header('cache-control', NO_STORE);
-    // Формат як у speed.cloudflare.com/meta — фронтенду байдуже, хто відповідає
-    return { clientIp: request.ip, asOrganization: null, city: null, country: null, colo: 'SELF' };
   });
 }

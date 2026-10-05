@@ -46,6 +46,7 @@ export async function buildApp({ config, repo = memoryRepository(), redis = unde
   await app.register(speedRoutes, {
     maxTransferBytes: config.limits.maxTransferBytes,
     perMinute: config.limits.speedPerMinute,
+    transfers: config.speedEndpoints,
   });
   await app.register(resultsRoutes, { repo, redis, perMinute: config.limits.resultsPerMinute });
   await app.register(analyticsRoutes, { repo, redis });

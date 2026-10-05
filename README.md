@@ -152,6 +152,16 @@ docker compose up -d --build   # http://localhost:8080
 - **Кешування статики:** файли з хешем — `immutable` на рік, HTML і `sw.js` — `no-cache`. Безпечні заголовки — `@fastify/helmet`.
 - Фронтенд вмикає власний сервер на етапі збірки (`.env.selfhosted` → `npm run build:self`); `ServerSelector` обирає найшвидший сервер за пінгом. На GitHub Pages лишається тільки Cloudflare.
 
+### Деплой на Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/VMMNick/speedtest)
+
+`render.yaml` (Blueprint) створює веб-сервіс із `Dockerfile`, PostgreSQL і Key Value (Redis) у Франкфурті та з'єднує їх через приватну мережу. Деплой — автоматично після зеленого CI (`autoDeployTrigger: checksPass`).
+
+- **Хмарна збірка** (`BUILD_MODE=cloud`, `.env.cloud`): вимірювання йдуть через Cloudflare, а сервер **не роздає** download/upload (`SPEED_ENDPOINTS=false`) — інакше кожен тест з'їдав би сотні МБ безкоштовного трафіку. Сервер зберігає статистику й показує аналітику.
+- **Безкоштовні тарифи:** сервіс засинає після 15 хв простою (перше відкриття ~1 хв), безкоштовна PostgreSQL живе 30 днів, Key Value не зберігається на диск. Для постійної роботи — платні плани в `render.yaml`.
+- Хмарна збірка перевіряється в CI окремим E2E (`npm run test:e2e:cloud`) і збіркою Docker-образу з `BUILD_MODE=cloud`.
+
 Без Docker:
 
 ```bash

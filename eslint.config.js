@@ -32,7 +32,7 @@ export default [
   },
   {
     // Код у page.evaluate() виконується в браузері
-    files: ['tests/e2e/**/*.js', 'tests/live/**/*.js', 'tests/e2e-server/**/*.js'],
+    files: ['tests/e2e/**/*.js', 'tests/live/**/*.js', 'tests/e2e-server/**/*.js', 'tests/e2e-cloud/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {

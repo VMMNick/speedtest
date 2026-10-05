@@ -164,6 +164,12 @@ jobs:
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
           REDIS_URL: ${{ env.TEST_REDIS_URL }}
 
+      - name: E2E of the cloud build (as on Render)
+        run: npm run test:e2e:cloud
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          REDIS_URL: ${{ env.TEST_REDIS_URL }}
+
   docker:
     name: Docker image + compose smoke test
     runs-on: ubuntu-latest
@@ -182,6 +188,9 @@ jobs:
             -d '{"server":"self","download":100,"upload":50,"ping":10,"jitter":1,"loss":0,"grade":"A","score":95}'
           curl -fsS http://localhost:8080/api/results/stats | grep -q '"count":1'
           test "$(docker inspect -f '{{.Config.User}}' speedtest:latest)" = node
+
+      - name: Build the cloud image (as Render does)
+        run: docker build --build-arg BUILD_MODE=cloud -t speedtest:cloud .
 
       - name: Logs on failure
         if: failure()
@@ -222,20 +231,20 @@ jobs:
 
       - name: Configure Pages
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Build (base = /<repo>/)
         run: npm run build
         env:
           BASE_PATH: ${{ steps.pages.outputs.base_path }}/
 
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist/
 
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   live:
     name: Live smoke (справжній Cloudflare)
