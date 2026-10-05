@@ -4,7 +4,9 @@ test('Chart.js не вантажиться на старті, лише за на
   const chunks = [];
   app.on('request', (r) => /ChartManager-.*\.js$/.test(r.url()) && chunks.push(r.url()));
   await app.reload();
-  await app.waitForLoadState('networkidle');
+  // Сторінка повністю ініціалізована (сервер визначено) — і все одно без Chart.js
+  await expect(app.locator('#server-ip')).not.toHaveText('—');
+  await app.waitForTimeout(500);
   expect(chunks).toHaveLength(0);
 
   await app.getByRole('button', { name: 'Старт' }).hover();

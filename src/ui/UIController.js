@@ -4,6 +4,7 @@
  * Не містить бізнес-логіки — лише відображає стан, який передає app.js.
  */
 import { CONFIG } from '../core/config.js';
+import { planShare, sparklinePoints } from '../core/insights.js';
 
 /** @returns {HTMLElement} */
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -227,12 +228,59 @@ export class UIController {
     document.querySelector(`[data-metric="${name}"]`)?.classList.toggle('is-live', on);
   }
 
+  // ───────────── Порівняння, спарклайн, тариф ─────────────
+
+  /**
+   * Бейджі «↑ 12%» на картках відносно попереднього тесту.
+   * @param {Record<string, import('../core/insights.js').Delta> | null} cmp
+   */
+  showDeltas(cmp) {
+    for (const key of ['download', 'upload', 'ping', 'jitter']) {
+      const el = $(`[data-metric="${key}"] [data-delta]`);
+      const d = cmp?.[key];
+      el.hidden = !d;
+      if (!d) continue;
+      el.dataset.trend = d.trend;
+      el.textContent = d.trend === 'same' ? '≈ без змін' : `${d.delta > 0 ? '↑' : '↓'} ${Math.abs(d.pct).toFixed(0)}%`;
+      el.title = 'Порівняно з попереднім тестом';
+    }
+  }
+
+  /** @param {number[]} values */
+  setSparkline(values) {
+    $('[data-metric="ping"] [data-spark] polyline').setAttribute('points', sparklinePoints(values, 100, 24));
+  }
+
+  /**
+   * Частка від тарифу провайдера.
+   * @param {number | null} mbps   фактичне завантаження
+   * @param {number | null} planMbps
+   */
+  showPlan(mbps, planMbps) {
+    const box = $('#plan-result');
+    const share = planShare(mbps, planMbps);
+    box.hidden = !share;
+    if (!share) return;
+    box.dataset.level = share.level;
+    $('#plan-fill').style.transform = `scaleX(${Math.min(1, share.pct / 100)})`;
+    const verdict = share.level === 'good' ? 'у нормі' : share.level === 'ok' ? 'помітно нижче' : 'значно нижче';
+    const strong = document.createElement('strong');
+    strong.textContent = `${share.pct.toFixed(0)}%`;
+    $('#plan-text').replaceChildren(
+      'Завантаження — ',
+      strong,
+      ` від тарифу (${formatMbps(mbps)} з ${formatMbps(planMbps)} Мбіт/с), ${verdict}`,
+    );
+  }
+
   resetMetrics() {
     ['download', 'upload', 'ping', 'jitter', 'loss', 'stability'].forEach((m) => {
       this.setMetric(m, null);
       this.setMetricLive(m, false);
     });
     $('[data-metric="stability"]').dataset.grade = '';
+    this.showDeltas(null);
+    this.setSparkline([]);
   }
 
   /**
@@ -314,10 +362,13 @@ export class UIController {
 
   /**
    * @param {import('../core/types.js').TestResult[]} entries
-   * @param {{ onDelete?: (id: number) => void }} [opts]
+   * @param {{ onDelete?: (id: number) => void, filtered?: boolean }} [opts]
    */
-  renderHistory(entries, { onDelete = undefined } = {}) {
+  renderHistory(entries, { onDelete = undefined, filtered = false } = {}) {
     this.el.historyEmpty.hidden = entries.length > 0;
+    this.el.historyEmpty.textContent = filtered
+      ? 'За цей період тестів немає.'
+      : 'Ще немає жодного тесту. Натисніть «Старт».';
     this.el.historyBody.replaceChildren(
       ...entries.map((e) => {
         const tr = document.createElement('tr');

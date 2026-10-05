@@ -108,3 +108,22 @@
   text-align: center;
   color: var(--color-text-muted);
 }
+
+.modal__head h2 {
+  flex: 1;
+}
+.select {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+}
+.btn--danger.is-confirm {
+  color: #fff;
+  background: var(--color-danger-text);
+  border-color: transparent;
+}

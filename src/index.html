@@ -135,6 +135,7 @@
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>Мбіт/с</small></div>
           <div class="metric__sub" data-sub></div>
+          <div class="metric__delta" data-delta hidden></div>
         </article>
         <article class="metric card" data-metric="upload">
           <header class="metric__head">
@@ -143,6 +144,7 @@
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>Мбіт/с</small></div>
           <div class="metric__sub" data-sub></div>
+          <div class="metric__delta" data-delta hidden></div>
         </article>
         <article class="metric card" data-metric="ping">
           <header class="metric__head">
@@ -151,6 +153,10 @@
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>мс</small></div>
           <div class="metric__sub" data-sub></div>
+          <div class="metric__delta" data-delta hidden></div>
+          <svg class="sparkline" data-spark viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="" />
+          </svg>
         </article>
         <article class="metric card" data-metric="jitter">
           <header class="metric__head">
@@ -159,6 +165,7 @@
           </header>
           <div class="metric__value"><span class="mono" data-value>—</span><small>мс</small></div>
           <div class="metric__sub" data-sub></div>
+          <div class="metric__delta" data-delta hidden></div>
         </article>
         <article class="metric card" data-metric="loss">
           <header class="metric__head">
@@ -209,6 +216,27 @@
           </div>
         </dl>
         <ul class="usecases" id="usecases"></ul>
+
+        <div class="plan">
+          <label class="plan__label" for="plan-input">Тариф провайдера</label>
+          <div class="plan__field">
+            <input
+              id="plan-input"
+              type="number"
+              inputmode="decimal"
+              min="1"
+              max="100000"
+              step="any"
+              placeholder="напр. 500"
+              aria-describedby="plan-text"
+            />
+            <span>Мбіт/с</span>
+          </div>
+          <div class="plan__result" id="plan-result" hidden>
+            <div class="plan__bar" aria-hidden="true"><div class="plan__fill" id="plan-fill"></div></div>
+            <p class="plan__text" id="plan-text" aria-live="polite"></p>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -221,6 +249,13 @@
       <div class="modal__inner">
         <header class="modal__head">
           <h2 id="history-title">Історія тестів</h2>
+          <label class="sr-only" for="history-period">Період</label>
+          <select class="select" id="history-period">
+            <option value="all">Увесь час</option>
+            <option value="24h">24 години</option>
+            <option value="7d">7 днів</option>
+            <option value="30d">30 днів</option>
+          </select>
           <button class="icon-btn" type="button" data-close title="Закрити">
             <span aria-hidden="true">✕</span><span class="sr-only">Закрити</span>
           </button>

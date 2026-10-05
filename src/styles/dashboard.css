@@ -488,3 +488,101 @@
   text-decoration: line-through;
   opacity: 0.8;
 }
+
+/* ───── Порівняння з попереднім тестом ───── */
+.metric__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font: 600 12px var(--font-mono);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+}
+.metric__delta[data-trend='better'] {
+  color: var(--color-success-text);
+  background: color-mix(in srgb, var(--color-success) 14%, transparent);
+}
+.metric__delta[data-trend='worse'] {
+  color: var(--color-danger-text);
+  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+}
+
+/* ───── Спарклайн пінгу ───── */
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin-top: 6px;
+  overflow: visible;
+}
+.sparkline polyline {
+  fill: none;
+  stroke: var(--color-ping);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ───── Тариф ───── */
+.plan {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.plan__label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.plan__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+.plan__field input {
+  width: 140px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font: 500 15px var(--font-mono);
+}
+.plan__bar {
+  height: 8px;
+  border-radius: 8px;
+  background: var(--gauge-track);
+  overflow: hidden;
+}
+.plan__fill {
+  height: 100%;
+  transform-origin: left;
+  transform: scaleX(0);
+  background: var(--color-download);
+  transition: transform 0.4s var(--ease-out);
+}
+.plan__result[data-level='good'] .plan__fill {
+  background: var(--color-success);
+}
+.plan__result[data-level='ok'] .plan__fill {
+  background: var(--color-warning);
+}
+.plan__result[data-level='bad'] .plan__fill {
+  background: var(--color-danger);
+}
+.plan__text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.plan__text strong {
+  color: var(--color-text);
+}

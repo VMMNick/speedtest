@@ -10,7 +10,8 @@ const STORE = 'history';
 const LS_HISTORY = 'speedtest:history';
 const LS_SETTINGS = 'speedtest:settings';
 
-const DEFAULT_SETTINGS = { theme: 'system', sound: true };
+/** planMbps — тариф провайдера (Мбіт/с), null — не задано */
+const DEFAULT_SETTINGS = { theme: 'system', sound: true, planMbps: null };
 
 const promisify = (req) =>
   new Promise((resolve, reject) => {
@@ -79,7 +80,10 @@ export class StorageManager {
     return { ...entry, id };
   }
 
-  /** Історія, найновіші — першими. */
+  /**
+   * Історія, найновіші — першими.
+   * @returns {Promise<import('../core/types.js').TestResult[]>}
+   */
   async getHistory() {
     if (this.db) {
       const all = await promisify(this._tx().getAll());

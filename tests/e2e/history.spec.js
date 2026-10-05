@@ -37,6 +37,7 @@ test('результати зберігаються, видаляються, е�
 
   // Очищення
   await dialog.getByRole('button', { name: 'Очистити історію' }).click();
+  await dialog.getByRole('button', { name: /Точно очистити/ }).click(); // підтвердження
   await expect(rows).toHaveCount(0);
   await expect(dialog.locator('#history-empty')).toBeVisible();
 

@@ -13,6 +13,7 @@ import { UIController, formatMbps, formatMs } from './ui/UIController.js';
 import { ThemeManager } from './ui/ThemeManager.js';
 import { StorageManager } from './services/StorageManager.js';
 import { LIGHT_CONFIG, detectLightMode, mergeDeep } from './core/config.js';
+import { compareResults, filterByPeriod } from './core/insights.js';
 import { ServerSelector } from './services/ServerSelector.js';
 
 const PHASE_NAMES = { ping: 'Пінг', download: 'Завантаження', upload: 'Вивантаження' };
@@ -58,6 +59,8 @@ theme.addEventListener('change', () => charts?.updateTheme());
 let worker = null;
 let selected = null; // { server, latency }
 let running = false;
+/** Пінги поточного тесту — для спарклайна */
+let pingLive = [];
 
 // ───────────── Ініціалізація ─────────────
 
@@ -99,11 +102,38 @@ function bindEvents() {
     ui.setSound(settings.sound);
   });
   document.getElementById('btn-history').addEventListener('click', openHistory);
-  document.getElementById('btn-clear').addEventListener('click', async () => {
+  // Очищення — у два кліки: перший просить підтвердження, другий (протягом 4 с) очищає
+  const clearBtn = document.getElementById('btn-clear');
+  let confirmTimer = 0;
+  const resetClear = () => {
+    clearTimeout(confirmTimer);
+    clearBtn.classList.remove('is-confirm');
+    clearBtn.textContent = 'Очистити історію';
+  };
+  clearBtn.addEventListener('click', async () => {
     if (!(await storage.getHistory()).length) return;
+    if (!clearBtn.classList.contains('is-confirm')) {
+      clearBtn.classList.add('is-confirm');
+      clearBtn.textContent = 'Точно очистити? Натисніть ще раз';
+      confirmTimer = window.setTimeout(resetClear, 4000);
+      return;
+    }
+    resetClear();
     await storage.clearHistory();
     await refreshHistory();
     ui.toast('Історію очищено');
+  });
+  ui.el.modal.addEventListener('close', resetClear);
+
+  document.getElementById('history-period').addEventListener('change', refreshHistory);
+
+  // Тариф провайдера: зберігається і одразу перераховує частку
+  const planInput = /** @type {HTMLInputElement} */ (document.getElementById('plan-input'));
+  if (settings.planMbps) planInput.value = String(settings.planMbps);
+  planInput.addEventListener('input', () => {
+    const v = Number(planInput.value);
+    settings = storage.saveSettings({ planMbps: v > 0 ? v : null });
+    if (lastResult) ui.showPlan(lastResult.download.mbps, settings.planMbps);
   });
   document.getElementById('btn-export').addEventListener('click', exportCSV);
 
@@ -147,6 +177,7 @@ async function startTest() {
     return;
   }
   running = true;
+  pingLive = [];
   ui.setRunning(true);
   unlockAudio(); // синхронно, поки діє жест користувача
   (await loadCharts())?.resetLive();
@@ -185,6 +216,8 @@ function handleMessage(msg) {
         if (msg.value != null) {
           ui.setGaugeValue(msg.value, { decimals: 'ms' });
           ui.setMetric('ping', msg.value);
+          pingLive.push(msg.value);
+          ui.setSparkline(pingLive);
         }
       } else {
         ui.setGaugeValue(msg.value);
@@ -227,16 +260,25 @@ function handleMessage(msg) {
   }
 }
 
+/** Останній результат — щоб перерахувати частку від тарифу при зміні поля */
+let lastResult = null;
+
 async function onDone(results) {
+  lastResult = results;
   results.server = { ...results.server, latency: selected?.latency ?? null };
   ui.showResults(results);
   ui.announce(`Тест завершено. Оцінка стабільності ${results.stability.grade}, ${results.stability.score} зі 100`);
   ui.setPhase('done');
   ui.setPhaseProgress(1);
   ui.setGaugeValue(results.download.mbps);
+  ui.setSparkline(results.ping.samples ?? []);
+  ui.showPlan(results.download.mbps, settings.planMbps);
   finish();
   if (settings.sound) playChime();
   try {
+    // Порівнюємо з попереднім тестом ДО збереження нового
+    const [prev] = await storage.getHistory();
+    ui.showDeltas(compareResults(prev, results));
     await storage.addResult(results);
   } catch (e) {
     console.warn('Не вдалося зберегти результат', e);
@@ -255,9 +297,17 @@ function finish() {
 
 // ───────────── Історія ─────────────
 
+const historyPeriod = () => /** @type {HTMLSelectElement} */ (document.getElementById('history-period')).value;
+
+/** Історія з урахуванням вибраного періоду */
+async function visibleHistory() {
+  return filterByPeriod(await storage.getHistory(), historyPeriod());
+}
+
 async function refreshHistory() {
-  const entries = await storage.getHistory();
+  const entries = await visibleHistory();
   ui.renderHistory(entries, {
+    filtered: historyPeriod() !== 'all',
     onDelete: async (id) => {
       await storage.deleteResult(id);
       refreshHistory();
@@ -272,8 +322,8 @@ async function openHistory() {
 }
 
 async function exportCSV() {
-  const entries = await storage.getHistory();
-  if (!entries.length) return ui.toast('Історія порожня');
+  const entries = await visibleHistory();
+  if (!entries.length) return ui.toast('Немає записів для експорту');
   const blob = new Blob(['\uFEFF' + StorageManager.toCSV(entries)], { type: 'text/csv;charset=utf-8' });
   const a = Object.assign(document.createElement('a'), {
     href: URL.createObjectURL(blob),
