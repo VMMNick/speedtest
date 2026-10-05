@@ -14,8 +14,23 @@ const server = {
 /** Швидкі налаштування, щоб тести тривали частки секунди. */
 const fastConfig = {
   ping: { count: 5, timeoutMs: 200, intervalMs: 0, warmup: 0 },
-  download: { durationMs: 300, streams: 2, initialBytes: 10_000, maxBytes: 200_000, targetRequestMs: 50, abortAtDeadline: true },
-  upload: { durationMs: 300, streams: 2, initialBytes: 10_000, maxBytes: 200_000, targetRequestMs: 50, abortAtDeadline: false, graceMs: 200 },
+  download: {
+    durationMs: 300,
+    streams: 2,
+    initialBytes: 10_000,
+    maxBytes: 200_000,
+    targetRequestMs: 50,
+    abortAtDeadline: true,
+  },
+  upload: {
+    durationMs: 300,
+    streams: 2,
+    initialBytes: 10_000,
+    maxBytes: 200_000,
+    targetRequestMs: 50,
+    abortAtDeadline: false,
+    graceMs: 200,
+  },
   loadedLatency: { intervalMs: 30, timeoutMs: 200 },
   sampleIntervalMs: 20,
   warmupMs: 50,
@@ -54,7 +69,13 @@ function mockFetch({ failPings = 0, downloadDelay = 2 } = {}) {
       return new Response('ok');
     }
     if (url.startsWith(server.metaUrl)) {
-      return Response.json({ clientIp: '1.2.3.4', asOrganization: 'Test ISP', city: 'Kyiv', colo: 'KBP', country: 'UA' });
+      return Response.json({
+        clientIp: '1.2.3.4',
+        asOrganization: 'Test ISP',
+        city: 'Kyiv',
+        colo: 'KBP',
+        country: 'UA',
+      });
     }
     throw new Error('unexpected url ' + url);
   });
@@ -81,7 +102,12 @@ describe('NetworkEngine', () => {
 
   it('measureDownload вимірює швидкість і шле прогрес', async () => {
     const events = [];
-    const engine = new NetworkEngine({ server, config: fastConfig, fetchImpl: mockFetch(), onEvent: (e) => events.push(e) });
+    const engine = new NetworkEngine({
+      server,
+      config: fastConfig,
+      fetchImpl: mockFetch(),
+      onEvent: (e) => events.push(e),
+    });
     const dl = await engine.measureDownload();
     expect(dl.bytes).toBeGreaterThan(0);
     expect(dl.mbps).toBeGreaterThan(0);
@@ -250,7 +276,14 @@ describe('capChunk — обмеження розміру чанка за шви�
       server,
       config: {
         ...fastConfig,
-        upload: { ...fastConfig.upload, durationMs: 400, streams: 1, maxBytes: 10_000_000, maxRequestMs: 60, graceMs: 150 },
+        upload: {
+          ...fastConfig.upload,
+          durationMs: 400,
+          streams: 1,
+          maxBytes: 10_000_000,
+          maxRequestMs: 60,
+          graceMs: 150,
+        },
       },
       fetchImpl: mockFetch(),
       uploadImpl,
@@ -299,7 +332,12 @@ describe('ServerSelector', () => {
   });
 
   it('позначає недоступність, якщо всі сервери мовчать', async () => {
-    const sel = new ServerSelector({ servers: [server], fetchImpl: async () => { throw new TypeError('offline'); } });
+    const sel = new ServerSelector({
+      servers: [server],
+      fetchImpl: async () => {
+        throw new TypeError('offline');
+      },
+    });
     const best = await sel.selectBest();
     expect(best.reachable).toBe(false);
   });

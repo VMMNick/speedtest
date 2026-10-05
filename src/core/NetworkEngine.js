@@ -27,15 +27,15 @@ export async function fetchUpload(fetchImpl, url, body, onBytes, signal) {
 export class NetworkEngine {
   /**
    * @param {object} opts
-   * @param {object} opts.server   — елемент із SERVERS
-   * @param {object} [opts.config] — перевизначення CONFIG
-   * @param {Function} [opts.fetchImpl]
-   * @param {Function} [opts.uploadImpl] (url, blob, onBytes, signal) => Promise
-   * @param {Function} [opts.now]
-   * @param {Function} [opts.onEvent] — колбек подій прогресу
-   * @param {Performance} [opts.perf] — для точних Resource Timing (у воркері)
+   * @param {import('./types.js').Server} opts.server Елемент із SERVERS
+   * @param {object} [opts.config] Перевизначення CONFIG (глибоке злиття)
+   * @param {typeof fetch} [opts.fetchImpl]
+   * @param {import('./types.js').UploadFn} [opts.uploadImpl]
+   * @param {() => number} [opts.now]
+   * @param {(event: object) => void} [opts.onEvent] Колбек подій прогресу
+   * @param {Partial<Performance>} [opts.perf] Для точних Resource Timing (у воркері)
    */
-  constructor({ server, config = {}, fetchImpl, uploadImpl, now, onEvent, perf } = {}) {
+  constructor({ server, config = {}, fetchImpl, uploadImpl, now, onEvent, perf }) {
     if (!server) throw new Error('NetworkEngine: server is required');
     this.server = server;
     this.cfg = mergeDeep(CONFIG, config);
@@ -153,7 +153,7 @@ export class NetworkEngine {
   _resourceTiming(url) {
     if (!this.perf?.getEntriesByName) return null;
     const entries = this.perf.getEntriesByName(url);
-    const e = entries[entries.length - 1];
+    const e = /** @type {PerformanceResourceTiming | undefined} */ (entries[entries.length - 1]);
     if (!e || !e.requestStart || !e.responseStart) return null;
     const rtt = e.responseStart - e.requestStart;
     return rtt > 0 ? rtt : null;
@@ -304,7 +304,9 @@ export class NetworkEngine {
     await latencyLoop;
     this._checkAbort();
     if (totalBytes === 0) {
-      throw new Error(`${phase === 'download' ? 'Завантаження' : 'Вивантаження'} не вдалося: ${lastError?.message ?? 'немає даних'}`);
+      throw new Error(
+        `${phase === 'download' ? 'Завантаження' : 'Вивантаження'} не вдалося: ${lastError?.message ?? 'немає даних'}`,
+      );
     }
 
     const mbps = M.throughput(samples, this.cfg.warmupMs);

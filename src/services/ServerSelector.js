@@ -6,7 +6,13 @@ import { SERVERS } from '../core/config.js';
 import { median } from '../core/MetricsCalculator.js';
 
 export class ServerSelector {
-  constructor({ servers = SERVERS, fetchImpl, now } = {}) {
+  /**
+   * @param {object} [opts]
+   * @param {import('../core/types.js').Server[]} [opts.servers]
+   * @param {typeof fetch} [opts.fetchImpl]
+   * @param {() => number} [opts.now]
+   */
+  constructor({ servers = SERVERS, fetchImpl = undefined, now = undefined } = {}) {
     this.servers = servers;
     this.fetch = fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.now = now ?? (() => performance.now());

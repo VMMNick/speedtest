@@ -67,7 +67,8 @@ function bindEvents() {
 
   document.addEventListener('keydown', (e) => {
     // Enter/Space на кнопці чи посиланні — це їхній власний клік, не старт тесту
-    if (e.target.closest('input, textarea, select, button, a, [contenteditable], dialog[open]')) return;
+    const target = /** @type {Element} */ (e.target);
+    if (target.closest('input, textarea, select, button, a, [contenteditable], dialog[open]')) return;
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Enter' && !running) startTest();
     if (e.key === 'Escape' && running) stopTest();
@@ -245,7 +246,8 @@ let audioCtx = null;
 function unlockAudio() {
   if (!settings.sound || audioCtx) return;
   try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const Ctx = window.AudioContext || /** @type {any} */ (window).webkitAudioContext;
+    audioCtx = new Ctx();
   } catch {
     /* audio unsupported */
   }

@@ -51,8 +51,8 @@ export class ChartManager {
     return {
       responsive: true,
       maintainAspectRatio: false,
-      animation: this.reducedMotion ? false : { duration: 250 },
-      interaction: { mode: 'index', intersect: false },
+      animation: /** @type {false | { duration: number }} */ (this.reducedMotion ? false : { duration: 250 }),
+      interaction: { mode: /** @type {const} */ ('index'), intersect: false },
       plugins: {
         legend: { labels: { color: p.text, font: { family: p.font }, usePointStyle: true, boxHeight: 6 } },
         tooltip: {
@@ -128,7 +128,12 @@ export class ChartManager {
     const p = palette();
     const ordered = [...entries].reverse(); // від старих до нових
     const labels = ordered.map((e) =>
-      new Date(e.timestamp).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+      new Date(e.timestamp).toLocaleString('uk-UA', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
     );
     const dl = this._dataset('Завантаження', p.download);
     dl.data = ordered.map((e) => e.download?.mbps ?? 0);

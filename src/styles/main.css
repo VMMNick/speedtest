@@ -16,10 +16,10 @@ body {
   font-size: 15px;
   line-height: 1.5;
   color: var(--color-text);
-  background:
-    radial-gradient(1200px 600px at 50% -200px, var(--color-bg-accent), transparent 70%),
-    var(--color-bg);
-  transition: background-color var(--dur), color var(--dur);
+  background: radial-gradient(1200px 600px at 50% -200px, var(--color-bg-accent), transparent 70%), var(--color-bg);
+  transition:
+    background-color var(--dur),
+    color var(--dur);
 }
 
 h1,
@@ -154,7 +154,9 @@ button {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  transition: background-color var(--dur), border-color var(--dur);
+  transition:
+    background-color var(--dur),
+    border-color var(--dur);
 }
 
 .card__head {
@@ -177,7 +179,10 @@ button {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text-muted);
-  transition: color var(--dur), background-color var(--dur), transform 0.1s;
+  transition:
+    color var(--dur),
+    background-color var(--dur),
+    transform 0.1s;
 }
 .icon-btn:hover {
   color: var(--color-text);
@@ -207,7 +212,9 @@ button {
   border: 1px solid var(--color-border);
   background: var(--color-surface-2);
   font-weight: 500;
-  transition: background-color var(--dur), border-color var(--dur);
+  transition:
+    background-color var(--dur),
+    border-color var(--dur);
 }
 .btn--ghost {
   background: transparent;
@@ -247,7 +254,9 @@ button {
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow);
   animation: toast-in 0.3s var(--ease-out);
-  transition: opacity 0.3s, transform 0.3s;
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
 }
 .toast--error {
   border-left: 4px solid var(--color-danger);

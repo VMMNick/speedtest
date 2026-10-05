@@ -25,16 +25,27 @@ npm run preview   # перегляд продакшн-збірки
 
 Потрібен Node.js 20+.
 
+## Якість коду
+
+| Команда                           | Що робить                                                                             |
+| --------------------------------- | ------------------------------------------------------------------------------------- |
+| `npm run lint` / `lint:fix`       | ESLint (flat config, `eslint.config.js`)                                              |
+| `npm run format` / `format:check` | Prettier (`.prettierrc.json`)                                                         |
+| `npm run typecheck`               | TypeScript перевіряє JS за JSDoc-типами (`jsconfig.json`, типи — `src/core/types.js`) |
+| `npm run check`                   | усе разом + тести — запускати перед комітом                                           |
+
+Рекомендовані розширення VS Code — у `.vscode/extensions.json`.
+
 ## Як працює вимірювання
 
 Трафік іде через публічний API [speed.cloudflare.com](https://speed.cloudflare.com) (anycast, найближча точка присутності обирається автоматично, CORS дозволений):
 
-| Етап | Ендпоінт | Метод |
-| --- | --- | --- |
-| Пінг | `GET /__down?bytes=0` | 20 запитів, RTT із Resource Timing API (або wall-clock), перший — прогрів |
-| Download | `GET /__down?bytes=N` | 4 потоки × 10 с, байти рахуються зі стриму `ReadableStream` |
-| Upload | `POST /__up` | 3 потоки × 10 с, `text/plain` (без CORS preflight), нестискуваний payload |
-| Метадані | `GET /meta` | IP, провайдер, місто, точка присутності |
+| Етап     | Ендпоінт              | Метод                                                                     |
+| -------- | --------------------- | ------------------------------------------------------------------------- |
+| Пінг     | `GET /__down?bytes=0` | 20 запитів, RTT із Resource Timing API (або wall-clock), перший — прогрів |
+| Download | `GET /__down?bytes=N` | 4 потоки × 10 с, байти рахуються зі стриму `ReadableStream`               |
+| Upload   | `POST /__up`          | 3 потоки × 10 с, `text/plain` (без CORS preflight), нестискуваний payload |
+| Метадані | `GET /meta`           | IP, провайдер, місто, точка присутності                                   |
 
 **Метрики** (`src/core/MetricsCalculator.js`):
 

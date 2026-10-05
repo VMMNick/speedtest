@@ -5,6 +5,7 @@
  */
 import { CONFIG } from '../core/config.js';
 
+/** @returns {HTMLElement} */
 const $ = (sel, root = document) => root.querySelector(sel);
 
 const CX = 150;
@@ -78,7 +79,7 @@ export class UIController {
       serverIp: $('#server-ip'),
       summary: $('#summary'),
       toasts: $('#toasts'),
-      modal: $('#history-modal'),
+      modal: /** @type {HTMLDialogElement} */ ($('#history-modal')),
       historyBody: $('#history-body'),
       historyEmpty: $('#history-empty'),
       historyStats: $('#history-stats'),
@@ -91,7 +92,8 @@ export class UIController {
     this._buildGauge(this.scale);
 
     this.el.modal.addEventListener('click', (e) => {
-      if (e.target === this.el.modal || e.target.closest('[data-close]')) this.closeHistory();
+      const target = /** @type {Element} */ (e.target);
+      if (target === this.el.modal || target.closest('[data-close]')) this.closeHistory();
     });
   }
 
@@ -148,7 +150,7 @@ export class UIController {
     this.displayed += Math.abs(diff) < 0.01 ? diff : diff * 0.18;
     const frac = valueToFraction(this.displayed, this.scale);
     this.el.progress.setAttribute('stroke-dasharray', `${(frac * 100).toFixed(2)} 100`);
-    this.el.progress.style.opacity = frac > 0.002 ? 1 : 0; // без «крапок» від round linecap на нулі
+    this.el.progress.style.opacity = frac > 0.002 ? '1' : '0'; // без «крапок» від round linecap на нулі
     this.el.needle.style.transform = `rotate(${(frac * SWEEP_DEG - 135).toFixed(2)}deg)`;
     this.el.value.textContent = this.format(this.displayed);
     this.raf = this.displayed === this.target ? null : requestAnimationFrame(() => this._animate());
@@ -214,18 +216,33 @@ export class UIController {
       this.setMetric(m, null);
       this.setMetricLive(m, false);
     });
-    document.querySelector('[data-metric="stability"]').dataset.grade = '';
+    $('[data-metric="stability"]').dataset.grade = '';
   }
 
-  /** Відображає підсумок після завершення тесту. */
+  /**
+   * Відображає підсумок після завершення тесту.
+   * @param {import('../core/types.js').TestResult} r
+   */
   showResults(r) {
     this.setMetric('ping', r.ping.median, `мін ${formatMs(r.ping.min)} · макс ${formatMs(r.ping.max)}`);
-    this.setMetric('jitter', r.ping.jitter, r.ping.jitter < 5 ? 'Відмінно' : r.ping.jitter < 20 ? 'Нормально' : 'Високий');
+    this.setMetric(
+      'jitter',
+      r.ping.jitter,
+      r.ping.jitter < 5 ? 'Відмінно' : r.ping.jitter < 20 ? 'Нормально' : 'Високий',
+    );
     this.setMetric('loss', r.ping.loss, r.ping.loss === 0 ? 'Без втрат' : 'Частина запитів без відповіді');
-    this.setMetric('download', r.download.mbps, `${formatBytes(r.download.bytes)} за ${(r.download.durationMs / 1000).toFixed(1)} с`);
-    this.setMetric('upload', r.upload.mbps, `${formatBytes(r.upload.bytes)} за ${(r.upload.durationMs / 1000).toFixed(1)} с`);
+    this.setMetric(
+      'download',
+      r.download.mbps,
+      `${formatBytes(r.download.bytes)} за ${(r.download.durationMs / 1000).toFixed(1)} с`,
+    );
+    this.setMetric(
+      'upload',
+      r.upload.mbps,
+      `${formatBytes(r.upload.bytes)} за ${(r.upload.durationMs / 1000).toFixed(1)} с`,
+    );
     this.setMetric('stability', r.stability.score, `Оцінка ${r.stability.grade}`);
-    document.querySelector('[data-metric="stability"]').dataset.grade = r.stability.grade;
+    $('[data-metric="stability"]').dataset.grade = r.stability.grade;
 
     $('#summary-grade').textContent = r.stability.grade;
     $('#summary-grade').dataset.grade = r.stability.grade;
@@ -255,8 +272,9 @@ export class UIController {
   // ───────────── Сервер ─────────────
 
   showServer(server, meta, latency) {
-    const loc = meta?.city ? `${meta.city}${meta.colo ? ` (${meta.colo})` : ''}` : meta?.colo ?? '';
-    this.el.serverName.textContent = [server.name, loc].filter(Boolean).join(' · ') + (latency ? ` · ${formatMs(latency)} мс` : '');
+    const loc = meta?.city ? `${meta.city}${meta.colo ? ` (${meta.colo})` : ''}` : (meta?.colo ?? '');
+    this.el.serverName.textContent =
+      [server.name, loc].filter(Boolean).join(' · ') + (latency ? ` · ${formatMs(latency)} мс` : '');
     this.el.serverIsp.textContent = meta?.isp ?? '—';
     this.el.serverIp.textContent = meta?.ip ?? '—';
   }
@@ -275,7 +293,11 @@ export class UIController {
     this.el.modal.close();
   }
 
-  renderHistory(entries, { onDelete } = {}) {
+  /**
+   * @param {import('../core/types.js').TestResult[]} entries
+   * @param {{ onDelete?: (id: number) => void }} [opts]
+   */
+  renderHistory(entries, { onDelete = undefined } = {}) {
     this.el.historyEmpty.hidden = entries.length > 0;
     this.el.historyBody.replaceChildren(
       ...entries.map((e) => {
@@ -325,8 +347,8 @@ export class UIController {
       ...stats.map(([k, v]) => {
         const d = document.createElement('div');
         d.innerHTML = `<span class="label"></span><strong class="mono"></strong>`;
-        d.querySelector('.label').textContent = k;
-        d.querySelector('strong').textContent = v;
+        d.querySelector('.label').textContent = String(k);
+        d.querySelector('strong').textContent = String(v);
         return d;
       }),
     );

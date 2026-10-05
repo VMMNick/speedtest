@@ -61,7 +61,15 @@ describe('MetricsCalculator — пропускна здатність', () => {
   });
 
   it('throughput для короткого тесту бере весь інтервал', () => {
-    expect(M.throughput([{ t: 0, bytes: 0 }, { t: 200, bytes: 250_000 }], 1500)).toBeCloseTo(10);
+    expect(
+      M.throughput(
+        [
+          { t: 0, bytes: 0 },
+          { t: 200, bytes: 250_000 },
+        ],
+        1500,
+      ),
+    ).toBeCloseTo(10);
     expect(M.throughput([], 0)).toBe(0);
   });
 

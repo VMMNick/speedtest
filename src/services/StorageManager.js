@@ -149,7 +149,16 @@ export class StorageManager {
 
   /** Експорт історії у CSV. */
   static toCSV(entries) {
-    const head = ['Дата', 'Сервер', 'Пінг, мс', 'Джиттер, мс', 'Втрати, %', 'Download, Мбіт/с', 'Upload, Мбіт/с', 'Стабільність'];
+    const head = [
+      'Дата',
+      'Сервер',
+      'Пінг, мс',
+      'Джиттер, мс',
+      'Втрати, %',
+      'Download, Мбіт/с',
+      'Upload, Мбіт/с',
+      'Стабільність',
+    ];
     const rows = entries.map((e) => [
       new Date(e.timestamp).toISOString(),
       e.server?.name ?? '',

@@ -3,7 +3,12 @@
  * 'system' слідує за налаштуваннями ОС і реагує на їх зміну.
  */
 export class ThemeManager extends EventTarget {
-  constructor({ initial = 'system', onSave } = {}) {
+  /**
+   * @param {object} [opts]
+   * @param {'system' | 'light' | 'dark'} [opts.initial]
+   * @param {(mode: string) => void} [opts.onSave]
+   */
+  constructor({ initial = 'system', onSave = undefined } = {}) {
     super();
     this.mode = initial;
     this.onSave = onSave ?? (() => {});
@@ -33,7 +38,9 @@ export class ThemeManager extends EventTarget {
   apply() {
     const theme = this.resolved;
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0b1020' : '#f4f6fb');
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#0b1020' : '#f4f6fb');
     this.dispatchEvent(new CustomEvent('change', { detail: { theme } }));
   }
 }

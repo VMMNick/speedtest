@@ -9,11 +9,21 @@
     'chart'
     'summary';
 }
-.server-bar { grid-area: server; }
-.gauge-panel { grid-area: gauge; }
-.metrics { grid-area: metrics; }
-.chart-card { grid-area: chart; }
-.summary { grid-area: summary; }
+.server-bar {
+  grid-area: server;
+}
+.gauge-panel {
+  grid-area: gauge;
+}
+.metrics {
+  grid-area: metrics;
+}
+.chart-card {
+  grid-area: chart;
+}
+.summary {
+  grid-area: summary;
+}
 
 @media (min-width: 900px) {
   .layout {
@@ -130,9 +140,15 @@
   letter-spacing: 0.08em;
   color: var(--color-text-muted);
 }
-.gauge[data-phase='download'] .gauge__phase { color: var(--color-download); }
-.gauge[data-phase='upload'] .gauge__phase { color: var(--color-upload); }
-.gauge[data-phase='ping'] .gauge__phase { color: var(--color-ping); }
+.gauge[data-phase='download'] .gauge__phase {
+  color: var(--color-download);
+}
+.gauge[data-phase='upload'] .gauge__phase {
+  color: var(--color-upload);
+}
+.gauge[data-phase='ping'] .gauge__phase {
+  color: var(--color-ping);
+}
 .gauge__value {
   font-size: clamp(36px, 9vw, 52px);
   font-weight: 700;
@@ -166,7 +182,9 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   box-shadow: 0 10px 40px color-mix(in srgb, var(--color-download) 45%, transparent);
-  transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
+  transition:
+    transform 0.2s var(--ease-out),
+    box-shadow 0.2s;
 }
 .start-btn:hover {
   transform: scale(1.04);
@@ -183,11 +201,19 @@
   animation: pulse 2.2s var(--ease-out) infinite;
 }
 @keyframes pulse {
-  0% { transform: scale(0.95); opacity: 0.6; }
-  100% { transform: scale(1.25); opacity: 0; }
+  0% {
+    transform: scale(0.95);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .start-btn__ring { animation: none; }
+  .start-btn__ring {
+    animation: none;
+  }
 }
 
 /* Після тесту кнопка стає маленькою під показником */
@@ -204,8 +230,12 @@
   display: block;
   box-shadow: 0 6px 18px color-mix(in srgb, var(--color-download) 35%, transparent);
 }
-.gauge[data-phase='done'] .start-btn__ring { display: none; }
-.gauge[data-phase='done'] .gauge__readout { bottom: 19%; }
+.gauge[data-phase='done'] .start-btn__ring {
+  display: none;
+}
+.gauge[data-phase='done'] .gauge__readout {
+  bottom: 19%;
+}
 
 /* Прогрес фаз */
 .phase-progress {
@@ -306,12 +336,22 @@
   text-overflow: ellipsis;
 }
 
-.metric[data-metric='download'] .icon { color: var(--color-download); }
-.metric[data-metric='upload'] .icon { color: var(--color-upload); }
+.metric[data-metric='download'] .icon {
+  color: var(--color-download);
+}
+.metric[data-metric='upload'] .icon {
+  color: var(--color-upload);
+}
 .metric[data-metric='ping'] .icon,
-.metric[data-metric='jitter'] .icon { color: var(--color-ping); }
-.metric[data-metric='loss'] .icon { color: var(--color-danger); }
-.metric[data-metric='stability'] .icon { color: var(--color-success); }
+.metric[data-metric='jitter'] .icon {
+  color: var(--color-ping);
+}
+.metric[data-metric='loss'] .icon {
+  color: var(--color-danger);
+}
+.metric[data-metric='stability'] .icon {
+  color: var(--color-success);
+}
 
 /* Індикатор «зараз вимірюється» */
 .metric::after {
@@ -330,14 +370,22 @@
   animation: shimmer 1.2s linear infinite;
 }
 @keyframes shimmer {
-  to { transform: translateX(100%); }
+  to {
+    transform: translateX(100%);
+  }
 }
 
 .metric[data-grade='A'] [data-value],
-.metric[data-grade='B'] [data-value] { color: var(--color-success); }
-.metric[data-grade='C'] [data-value] { color: var(--color-warning); }
+.metric[data-grade='B'] [data-value] {
+  color: var(--color-success);
+}
+.metric[data-grade='C'] [data-value] {
+  color: var(--color-warning);
+}
 .metric[data-grade='D'] [data-value],
-.metric[data-grade='F'] [data-value] { color: var(--color-danger); }
+.metric[data-grade='F'] [data-value] {
+  color: var(--color-danger);
+}
 
 /* ───── Графік ───── */
 .chart-card {
