@@ -5,7 +5,7 @@ import serviceWorker from './config/vite-plugin-sw.js';
 
 const r = (p) => fileURLToPath(new URL(p, import.meta.url));
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   // Для GitHub Pages сайт живе в підкаталозі (/speedtest/) — задається в CI через BASE_PATH
   base: process.env.BASE_PATH || '/',
   root: r('./src'),
@@ -18,6 +18,13 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
     // Не вбудовувати шрифти як data: URI — CSP дозволяє font-src лише 'self'
+    // Аналітика має сенс лише з бекендом — у звичайну збірку (GitHub Pages) вона не потрапляє
+    rollupOptions: {
+      input:
+        mode === 'selfhosted'
+          ? { main: r('./src/index.html'), analytics: r('./src/analytics.html') }
+          : { main: r('./src/index.html') },
+    },
     assetsInlineLimit: (file) => (/\.woff2?$/.test(file) ? false : undefined),
   },
   worker: {
@@ -32,4 +39,4 @@ export default defineConfig({
     include: ['tests/**/*.test.js'],
     environment: 'node',
   },
-});
+}));

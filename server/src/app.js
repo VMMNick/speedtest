@@ -8,6 +8,7 @@ import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import speedRoutes from './routes/speed.js';
 import resultsRoutes from './routes/results.js';
+import analyticsRoutes from './routes/analytics.js';
 import { memoryRepository } from './db.js';
 
 /**
@@ -46,7 +47,8 @@ export async function buildApp({ config, repo = memoryRepository(), redis = unde
     maxTransferBytes: config.limits.maxTransferBytes,
     perMinute: config.limits.speedPerMinute,
   });
-  await app.register(resultsRoutes, { repo, perMinute: config.limits.resultsPerMinute });
+  await app.register(resultsRoutes, { repo, redis, perMinute: config.limits.resultsPerMinute });
+  await app.register(analyticsRoutes, { repo, redis });
 
   app.get('/api/health', async (request, reply) => {
     const check = async (fn) => {

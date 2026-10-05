@@ -69,7 +69,7 @@ test('сервер віддає безпечні заголовки й прав�
   const sw = await request.get('/sw.js');
   expect(sw.headers()['cache-control']).toBe('no-cache');
   const body = await html.text();
-  const asset = body.match(/assets\/index-[\w-]+\.js/)[0];
+  const asset = body.match(/assets\/[\w-]+\.js/)[0];
   expect((await request.get(asset)).headers()['cache-control']).toContain('immutable');
   expect((await request.get('api/health')).status()).toBe(200);
 });

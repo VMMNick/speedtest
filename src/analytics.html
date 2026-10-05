@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="uk" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Рейтинг провайдерів і теплова карта швидкості інтернету за зібраними тестами." />
+    <meta name="theme-color" content="#0b1020" />
+    <title>Аналітика — Спідтест</title>
+    <!-- Тема до першого відмальовування (як на головній) -->
+    <script>
+      (function () {
+        var mode = 'system';
+        try {
+          mode = (JSON.parse(localStorage.getItem('speedtest:settings')) || {}).theme || 'system';
+        } catch (e) {}
+        var dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0b1020' : '#f4f6fb');
+      })();
+    </script>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/assets/icons/speedometer.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles/variables.css" />
+    <link rel="stylesheet" href="./styles/main.css" />
+    <link rel="stylesheet" href="./styles/analytics.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main" data-i18n="nav.skip">Перейти до вмісту</a>
+
+    <header class="topbar">
+      <a class="brand" href="./" data-i18n-attr="title:analytics.back" title="До тесту">
+        <span class="icon icon--lg icon--speedometer" aria-hidden="true"></span>
+        <span class="brand__name"><span data-i18n="brand.a">Спід</span><span data-i18n="brand.b">тест</span></span>
+      </a>
+      <nav class="topbar__actions" aria-label="Дії" data-i18n-attr="aria-label:nav.actions">
+        <button
+          class="icon-btn lang-btn"
+          id="btn-lang"
+          type="button"
+          title="Мова: English"
+          data-i18n-attr="title:nav.lang"
+        >
+          <span aria-hidden="true" data-i18n="nav.langShort">EN</span>
+          <span class="sr-only" data-i18n="nav.lang">Мова: English</span>
+        </button>
+        <button class="icon-btn" id="btn-theme" type="button" title="Змінити тему" data-i18n-attr="title:nav.theme">
+          <span class="icon icon--theme" aria-hidden="true"></span>
+          <span class="sr-only" data-i18n="nav.theme">Змінити тему</span>
+        </button>
+      </nav>
+    </header>
+
+    <main id="main" class="analytics">
+      <div class="analytics__head">
+        <h1 data-i18n="analytics.title">Аналітика</h1>
+        <div class="filters" role="group" aria-label="Фільтри" data-i18n-attr="aria-label:analytics.filters">
+          <label>
+            <span data-i18n="analytics.period">Період</span>
+            <select class="select" id="f-days">
+              <option value="7" data-i18n="history.7d">7 днів</option>
+              <option value="30" selected data-i18n="history.30d">30 днів</option>
+              <option value="90" data-i18n="analytics.90d">90 днів</option>
+              <option value="365" data-i18n="analytics.365d">Рік</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="analytics.city">Місто</span>
+            <select class="select" id="f-city">
+              <option value="" data-i18n="analytics.allCities">Усі міста</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <section class="kpis" aria-label="Підсумок" data-i18n-attr="aria-label:summary.section">
+        <div class="kpi card">
+          <span class="label" data-i18n="analytics.kpi.tests">Тестів</span
+          ><strong class="mono" id="kpi-count">—</strong>
+        </div>
+        <div class="kpi card">
+          <span class="label" data-i18n="analytics.kpi.avgDown">Середнє ↓</span
+          ><strong class="mono" id="kpi-down">—</strong>
+        </div>
+        <div class="kpi card">
+          <span class="label" data-i18n="analytics.kpi.avgUp">Середнє ↑</span
+          ><strong class="mono" id="kpi-up">—</strong>
+        </div>
+        <div class="kpi card">
+          <span class="label" data-i18n="analytics.kpi.ping">Медіанний пінг</span
+          ><strong class="mono" id="kpi-ping">—</strong>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="providers-title">
+        <header class="card__head">
+          <h2 id="providers-title" data-i18n="analytics.providers">Рейтинг провайдерів</h2>
+          <span class="label" data-i18n="analytics.kAnon">Лише провайдери з ≥ 3 тестами</span>
+        </header>
+        <div class="table-wrap">
+          <table class="providers">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col" data-i18n="server.isp">Провайдер</th>
+                <th scope="col" class="providers__bar-col" data-i18n="analytics.medianDown">Медіана ↓</th>
+                <th scope="col" class="num" data-i18n="analytics.p90Down">P90 ↓</th>
+                <th scope="col" class="num" data-i18n="analytics.medianUp">Медіана ↑</th>
+                <th scope="col" class="num" data-i18n="analytics.medianPing">Пінг</th>
+                <th scope="col" class="num" data-i18n="analytics.samples">Тестів</th>
+              </tr>
+            </thead>
+            <tbody id="providers-body"></tbody>
+          </table>
+          <p class="empty" id="providers-empty" hidden data-i18n="analytics.empty">
+            Ще замало даних — пройдіть кілька тестів.
+          </p>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="heatmap-title">
+        <header class="card__head">
+          <h2 id="heatmap-title" data-i18n="analytics.heatmap">Коли інтернет найшвидший</h2>
+          <label>
+            <span class="sr-only" data-i18n="server.isp">Провайдер</span>
+            <select class="select" id="f-isp">
+              <option value="" data-i18n="analytics.allIsps">Усі провайдери</option>
+            </select>
+          </label>
+        </header>
+        <p class="label" id="heatmap-note"></p>
+        <div class="heatmap-wrap">
+          <div class="heatmap" id="heatmap" role="img"></div>
+        </div>
+        <div class="legend" id="legend" aria-hidden="true"></div>
+        <p class="heatmap__insight" id="heatmap-insight" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+    <script type="module" src="./analytics.js"></script>
+  </body>
+</html>

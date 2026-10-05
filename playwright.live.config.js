@@ -15,6 +15,8 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['html', { open: 'never', outputFolder: 'playwright-report-live' }]] : 'list',
   use: {
     baseURL: LIVE_URL.endsWith('/') ? LIVE_URL : LIVE_URL + '/',
+    // Тексти в тесті — українською; без цього браузер CI (en-US) отримав би англійський інтерфейс
+    locale: 'uk-UA',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},

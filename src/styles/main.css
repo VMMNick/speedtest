@@ -90,6 +90,9 @@ button {
   mask: var(--icon) center / contain no-repeat;
 }
 /* Набір іконок — класи замість inline style (сумісно з суворою CSP) */
+.icon--chart {
+  --icon: url(/assets/icons/chart.svg);
+}
 .icon--download {
   --icon: url(/assets/icons/download.svg);
 }

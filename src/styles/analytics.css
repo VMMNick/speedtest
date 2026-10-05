@@ -1,0 +1,257 @@
+/* Сторінка аналітики */
+
+:root {
+  /* Послідовна шкала одного відтінку (синій), світла тема: світліше = повільніше */
+  --heat-0: #cde2fb;
+  --heat-1: #86b6ef;
+  --heat-2: #3987e5;
+  --heat-3: #1c5cab;
+  --heat-4: #0d366b;
+  --heat-empty: var(--color-surface-2);
+}
+[data-theme='dark'] {
+  /* Темна тема — свої кроки: «повільно» тоне у темному тлі, «швидко» — найсвітліше */
+  --heat-0: #184f95;
+  --heat-1: #256abf;
+  --heat-2: #3987e5;
+  --heat-3: #6da7ec;
+  --heat-4: #b7d3f6;
+}
+
+.brand {
+  text-decoration: none;
+}
+
+.analytics {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 var(--space) 40px;
+  display: grid;
+  gap: var(--space);
+}
+.analytics .card {
+  padding: 18px 20px;
+}
+/* Елементи grid за замовчуванням не стискаються вужче за вміст — таблиця й теплова карта
+   розпирали б сторінку на мобільних. Прокрутка — всередині карток. */
+.analytics > * {
+  min-width: 0;
+}
+
+.analytics__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.analytics__head h1 {
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+/* Фільтри — в один рядок над даними */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.filters label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.select {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+body.is-loading main {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+/* KPI-плитки */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.kpi {
+  display: grid;
+  gap: 4px;
+}
+.kpi strong {
+  font-size: 24px;
+}
+
+/* Рейтинг провайдерів */
+.table-wrap {
+  overflow-x: auto;
+}
+.providers {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.providers th,
+.providers td {
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.providers th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.providers tbody tr:last-child td {
+  border-bottom: none;
+}
+.providers .num {
+  text-align: right;
+}
+.providers .rank {
+  color: var(--color-text-muted);
+  width: 2ch;
+}
+.providers .isp {
+  font-weight: 600;
+}
+.providers__bar-col {
+  width: 40%;
+  min-width: 200px;
+}
+.bar {
+  position: relative;
+  height: 10px;
+  border-radius: 4px;
+  background: var(--color-surface-2);
+}
+.bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--color-download);
+}
+/* Тонка риска P90 — «стеля» провайдера */
+.bar__p90 {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--color-text-muted);
+}
+.bar__label {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text);
+}
+
+/* Теплова карта: 7 днів × 24 години */
+.heatmap-wrap {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.heatmap {
+  display: grid;
+  grid-template-columns: 3.5em repeat(24, minmax(18px, 1fr));
+  gap: 2px; /* проміжок кольору поверхні між клітинками */
+  min-width: 560px;
+  font-size: 11px;
+}
+.heatmap__hour {
+  color: var(--color-text-muted);
+  text-align: left;
+}
+.heatmap__day {
+  color: var(--color-text-muted);
+  align-self: center;
+}
+.heatmap__cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: var(--heat-empty);
+}
+.heatmap__cell[data-empty] {
+  background: repeating-linear-gradient(45deg, var(--heat-empty) 0 3px, transparent 3px 6px);
+}
+[data-bin='0'] {
+  background: var(--heat-0) !important;
+}
+[data-bin='1'] {
+  background: var(--heat-1) !important;
+}
+[data-bin='2'] {
+  background: var(--heat-2) !important;
+}
+[data-bin='3'] {
+  background: var(--heat-3) !important;
+}
+[data-bin='4'] {
+  background: var(--heat-4) !important;
+}
+.heatmap__cell[data-tip]:hover {
+  outline: 2px solid var(--color-text);
+  outline-offset: 1px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--heat-empty);
+}
+.legend__swatch[data-empty] {
+  background: repeating-linear-gradient(45deg, var(--color-border) 0 2px, transparent 2px 4px);
+}
+
+.heatmap__insight {
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+
+.tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  max-width: 260px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: 12px;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+}
+
+.empty {
+  margin: 0;
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+}

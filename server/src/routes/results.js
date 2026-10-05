@@ -29,8 +29,10 @@ export const resultSchema = {
   },
 };
 
-/** @type {import('fastify').FastifyPluginAsync<{ repo: any, perMinute: number }>} */
-export default async function resultsRoutes(app, { repo, perMinute }) {
+import { bumpDataVersion } from '../cache.js';
+
+/** @type {import('fastify').FastifyPluginAsync<{ repo: any, perMinute: number, redis?: import('ioredis').Redis }>} */
+export default async function resultsRoutes(app, { repo, perMinute, redis }) {
   app.post(
     '/api/results',
     {
@@ -47,6 +49,7 @@ export default async function resultsRoutes(app, { repo, perMinute }) {
     },
     async (request, reply) => {
       const saved = await repo.insert(request.body);
+      await bumpDataVersion(redis); // аналітика має одразу побачити новий результат
       return reply.code(201).send(saved);
     },
   );

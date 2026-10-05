@@ -67,7 +67,13 @@ describe('detectLang', () => {
 
 describe('жорстко прописаний текст в інтерфейсі', () => {
   // Увесь видимий текст має йти через t(): кирилиця в рядкових літералах UI-коду — це пропущений переклад
-  const files = ['src/app.js', 'src/ui/UIController.js', 'src/ui/ChartManager.js', 'src/ui/ShareCard.js'];
+  const files = [
+    'src/app.js',
+    'src/analytics.js',
+    'src/ui/UIController.js',
+    'src/ui/ChartManager.js',
+    'src/ui/ShareCard.js',
+  ];
   for (const file of files) {
     it(file, () => {
       const code = readFileSync(file, 'utf8')

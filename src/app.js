@@ -145,6 +145,8 @@ function bindEvents() {
   // Згода на анонімну статистику — лише коли збірка має бекенд
   const consent = /** @type {HTMLInputElement} */ (document.getElementById('stats-consent'));
   document.getElementById('stats-optin').hidden = !FEATURES.resultsApi;
+  // Аналітика є лише там, де є бекенд зі статистикою
+  document.getElementById('link-analytics').hidden = !FEATURES.resultsApi;
   consent.checked = settings.shareStats !== false;
   consent.addEventListener('change', () => (settings = storage.saveSettings({ shareStats: consent.checked })));
 

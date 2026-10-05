@@ -6,7 +6,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Redis } from 'ioredis';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
-import { createPool, migrate, pgRepository } from '../src/db.js';
+import { createPool, migrate, pgRepository, memoryRepository } from '../src/db.js';
+import { seed } from './fixtures.js';
 
 const DB = process.env.TEST_DATABASE_URL;
 const REDIS = process.env.TEST_REDIS_URL;
@@ -83,5 +84,63 @@ describe.skipIf(!REDIS)('Redis rate limit', () => {
     expect((await a.inject('/api/health')).json()).toMatchObject({ redis: 'ok' });
     await a.close();
     await b.close();
+  });
+});
+
+describe.skipIf(!DB)('аналітика: SQL = еталонна реалізація в пам’яті', () => {
+  let pool;
+  let pgRepo;
+  const mem = memoryRepository();
+  beforeAll(async () => {
+    pool = createPool(DB);
+    await migrate(pool, {});
+    await pool.query('TRUNCATE results');
+    pgRepo = pgRepository(pool);
+    await seed(pgRepo);
+    await seed(mem);
+  });
+  afterAll(() => pool.end());
+
+  it.each([
+    ['providers', {}],
+    ['providers', { city: 'Kyiv' }],
+    ['cities', {}],
+    ['heatmap', { tz: 'UTC' }],
+    ['heatmap', { tz: 'Europe/Kyiv' }],
+    // Chrome повертає застарілу назву — SQL має працювати так само
+    ['heatmap', { tz: 'America/New_York', isp: 'FastNet' }],
+  ])('%s %o', async (method, args) => {
+    const opts = method === 'heatmap' ? args : { ...args, minSamples: 3 };
+    expect(await pgRepo[method](opts)).toEqual(await mem[method](opts));
+  });
+
+  it('застаріла назва поясу з браузера (Europe/Kiev) не ламає SQL', async () => {
+    const kiev = await pgRepo.heatmap({ tz: 'Europe/Kiev' });
+    expect(kiev).toEqual(await pgRepo.heatmap({ tz: 'Europe/Kyiv' }));
+    expect(kiev).toEqual(await mem.heatmap({ tz: 'Europe/Kiev' }));
+  });
+
+  it.skipIf(!REDIS)('Redis-кеш: другий запит — HIT', async () => {
+    const redis = new Redis(REDIS);
+    const keys = await redis.keys('speedtest:analytics:*');
+    if (keys.length) await redis.del(...keys);
+    const app = await buildApp({ config: loadConfig({}), repo: pgRepo, redis, logger: false });
+    const a = await app.inject('/api/analytics/providers');
+    const b = await app.inject('/api/analytics/providers');
+    expect(a.headers['x-cache']).toBe('MISS');
+    expect(b.headers['x-cache']).toBe('HIT');
+    expect(b.json()).toEqual(a.json());
+    // Новий результат інвалідовує кеш — свіжі дані видно одразу, а не через 60 с
+    const post = await app.inject({
+      method: 'POST',
+      url: '/api/results',
+      payload: result,
+      remoteAddress: '192.0.2.77',
+    });
+    expect(post.statusCode).toBe(201);
+    const c = await app.inject('/api/analytics/providers');
+    expect(c.headers['x-cache']).toBe('MISS');
+    await app.close();
+    await redis.quit();
   });
 });

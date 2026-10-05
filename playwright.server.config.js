@@ -30,6 +30,8 @@ export default defineConfig({
       PORT: String(PORT),
       STATIC_DIR: 'dist',
       LOG_LEVEL: 'warn',
+      // Тести засівають дані через API — ліміт вищий за продакшн-овий
+      RATE_RESULTS_PER_MIN: '1000',
       ...(process.env.DATABASE_URL ? { DATABASE_URL: process.env.DATABASE_URL } : {}),
       ...(process.env.REDIS_URL ? { REDIS_URL: process.env.REDIS_URL } : {}),
     },
