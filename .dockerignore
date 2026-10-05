@@ -1,0 +1,14 @@
+**/node_modules
+dist
+.git
+.github
+.vscode
+tests
+test-results
+playwright-report
+playwright-report-live
+coverage
+*.log
+Dockerfile
+docker-compose.yml
+.env

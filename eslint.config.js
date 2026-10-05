@@ -3,7 +3,16 @@ import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 
 export default [
-  { ignores: ['dist/', 'coverage/', 'node_modules/', 'playwright-report/', 'test-results/'] },
+  {
+    ignores: [
+      'dist/',
+      'coverage/',
+      '**/node_modules/',
+      'playwright-report/',
+      'playwright-report-live/',
+      'test-results/',
+    ],
+  },
   js.configs.recommended,
   {
     files: ['src/**/*.js'],
@@ -18,12 +27,12 @@ export default [
     languageOptions: { globals: { ...globals.worker } },
   },
   {
-    files: ['tests/**/*.js', '*.config.js', 'config/**/*.js', 'scripts/**/*.js'],
+    files: ['tests/**/*.js', '*.config.js', 'config/**/*.js', 'scripts/**/*.js', 'server/**/*.js'],
     languageOptions: { globals: { ...globals.node } },
   },
   {
     // Код у page.evaluate() виконується в браузері
-    files: ['tests/e2e/**/*.js', 'tests/live/**/*.js'],
+    files: ['tests/e2e/**/*.js', 'tests/live/**/*.js', 'tests/e2e-server/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
@@ -37,7 +46,7 @@ export default [
     },
   },
   {
-    files: ['scripts/**/*.js'],
+    files: ['scripts/**/*.js', 'server/src/migrate-cli.js'],
     rules: { 'no-console': 'off' },
   },
   prettier,

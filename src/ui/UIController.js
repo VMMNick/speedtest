@@ -334,9 +334,11 @@ export class UIController {
   // ───────────── Сервер ─────────────
 
   showServer(server, meta, latency) {
-    const loc = meta?.city ? `${meta.city}${meta.colo ? ` (${meta.colo})` : ''}` : (meta?.colo ?? '');
+    const loc =
+      server.id === 'self' ? '' : meta?.city ? `${meta.city}${meta.colo ? ` (${meta.colo})` : ''}` : (meta?.colo ?? '');
+    const name = server.nameKey ? t(server.nameKey) : server.name;
     this.el.serverName.textContent =
-      [server.name, loc].filter(Boolean).join(' · ') + (latency ? ` · ${formatMs(latency)} ${t('unit.ms')}` : '');
+      [name, loc].filter(Boolean).join(' · ') + (latency ? ` · ${formatMs(latency)} ${t('unit.ms')}` : '');
     this.el.serverIsp.textContent = meta?.isp ?? '—';
     this.el.serverIp.textContent = meta?.ip ?? '—';
   }

@@ -7,8 +7,10 @@ coverage/
 Thumbs.db
 .env*
 !.env.example
+!.env.selfhosted
 playwright-report/
 test-results/
 blob-report/
 .playwright/
 playwright-report-live/
+dump.rdb

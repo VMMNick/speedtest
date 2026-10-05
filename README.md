@@ -79,9 +79,10 @@ GitHub Actions (`.github/workflows/ci.yml`) на кожен push у `main`, pull
 
 1. **quality** (Node 22 і 24): `npm ci` → ESLint → Prettier → typecheck → Vitest → build (артефакт `dist`)
 2. **e2e** (після quality): Playwright Chromium з кешем браузера → звіт `playwright-report` (артефакт), трейси при падінні
-
-3. **deploy** (лише `main`): збірка з `BASE_PATH=/<repo>/` → GitHub Pages
-4. **live** (після deploy): Playwright проти задеплоєного сайту і **справжнього** Cloudflare — CORS, base path, CSP, повний тест
+3. **server** — тести сервера з PostgreSQL і Redis + E2E проти self-hosted збірки
+4. **docker** — збірка образу, `docker compose up --wait`, смоук-тест API
+5. **deploy** (лише `main`, після всього вище): збірка з `BASE_PATH=/<repo>/` → GitHub Pages
+6. **live** (після deploy): Playwright проти задеплоєного сайту і **справжнього** Cloudflare — CORS, base path, CSP, повний тест
 
 Dependabot щотижня оновлює npm-залежності (dev-інструменти одним PR) і щомісяця — версії GitHub Actions.
 
@@ -110,6 +111,50 @@ Dependabot щотижня оновлює npm-залежності (dev-інст�
 - Живий smoke-тест вручну: `LIVE_URL=https://vmmnick.github.io/speedtest/ npm run test:live`.
 
 Рекомендовані розширення VS Code — у `.vscode/extensions.json`.
+
+## Власний сервер (Fastify + PostgreSQL + Redis)
+
+Крім Cloudflare, застосунок може міряти швидкість **до власного сервера** — напр. у локальній мережі (перевірка Wi-Fi/роутера без інтернету) або на своєму VPS — і збирати анонімну статистику.
+
+```bash
+docker compose up -d --build   # http://localhost:8080
+```
+
+| Сервіс  | Образ                     | Роль                                                                   |
+| ------- | ------------------------- | ---------------------------------------------------------------------- |
+| `app`   | збирається з `Dockerfile` | фронтенд (збірка `selfhosted`) + API на Fastify, non-root, healthcheck |
+| `db`    | `postgres:17-alpine`      | анонімні результати (volume `pgdata`)                                  |
+| `redis` | `redis:7-alpine`          | спільні лічильники rate limit для кількох інстансів                    |
+
+**API** (`server/`):
+
+| Метод | Шлях                         | Опис                                                                                   |
+| ----- | ---------------------------- | -------------------------------------------------------------------------------------- |
+| GET   | `/api/ping`                  | порожня відповідь + `Server-Timing: app;dur=…`                                         |
+| GET   | `/api/download?bytes=N`      | N нестискуваних байтів потоком (без буферизації)                                       |
+| POST  | `/api/upload`                | тіло рахується потоком і відкидається; ліміт → 413                                     |
+| GET   | `/api/meta`                  | IP клієнта у форматі Cloudflare `/meta`                                                |
+| POST  | `/api/results`               | зберегти результат; JSON Schema, **зайві поля → 400** (напр. IP), CHECK-обмеження в БД |
+| GET   | `/api/results/stats?days=30` | кількість, середні швидкості, медіанний пінг                                           |
+| GET   | `/api/health`                | стан БД і Redis (503, якщо щось недоступне)                                            |
+
+- **Приватність:** IP-адреси не зберігаються (лише для rate limit у Redis з TTL 1 хв). Надсилання статистики можна вимкнути галочкою внизу сторінки.
+- **Rate limit** на кожен маршрут (`RATE_SPEED_PER_MIN`, `RATE_RESULTS_PER_MIN`); при недоступному Redis вимірювання не ламаються.
+- **Міграції** (`server/migrations/*.sql`) застосовуються при старті під `pg_advisory_lock` — безпечно для кількох інстансів.
+- **Кешування статики:** файли з хешем — `immutable` на рік, HTML і `sw.js` — `no-cache`. Безпечні заголовки — `@fastify/helmet`.
+- Фронтенд вмикає власний сервер на етапі збірки (`.env.selfhosted` → `npm run build:self`); `ServerSelector` обирає найшвидший сервер за пінгом. На GitHub Pages лишається тільки Cloudflare.
+
+Без Docker:
+
+```bash
+npm ci --prefix server
+npm run build:self
+STATIC_DIR=dist DATABASE_URL=postgres://… REDIS_URL=redis://… npm run server   # обидва URL опційні
+```
+
+Змінні оточення — у `server/src/config.js`, приклад — `.env.example`.
+
+**Тести сервера:** `npm run test:server` (Vitest + `fastify.inject`; з `TEST_DATABASE_URL`/`TEST_REDIS_URL` — ще й інтеграційні: ідемпотентні й паралельні міграції, CHECK-обмеження, спільний rate limit для двох інстансів). `npm run test:e2e:server` — Playwright проти зібраного фронтенду, який роздає Fastify. У CI обидва йдуть із сервісами PostgreSQL і Redis, а окремий джоб збирає Docker-образ і перевіряє `docker compose up` смоук-тестом.
 
 ## Як працює вимірювання
 

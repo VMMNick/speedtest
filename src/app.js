@@ -12,7 +12,8 @@ import '@fontsource-variable/jetbrains-mono';
 import { UIController, formatMbps, formatMs } from './ui/UIController.js';
 import { ThemeManager } from './ui/ThemeManager.js';
 import { StorageManager } from './services/StorageManager.js';
-import { LIGHT_CONFIG, detectLightMode, mergeDeep } from './core/config.js';
+import { LIGHT_CONFIG, SERVERS, FEATURES, detectLightMode, mergeDeep, resolveServerUrls } from './core/config.js';
+import { toPayload, submitResult } from './services/ResultsApi.js';
 import { compareResults, filterByPeriod } from './core/insights.js';
 import { parseShareHash, shareUrl } from './core/share.js';
 import { t, setLang, getLang, detectLang, applyDom } from './i18n/index.js';
@@ -49,7 +50,8 @@ function loadCharts() {
 }
 
 const storage = new StorageManager();
-const selector = new ServerSelector();
+// URL серверів — абсолютні (відносні розв'язувались би у воркері від /assets/)
+const selector = new ServerSelector({ servers: SERVERS.map((s) => resolveServerUrls(s, document.baseURI)) });
 
 let settings = storage.getSettings();
 const theme = new ThemeManager({
@@ -139,6 +141,12 @@ function bindEvents() {
   ui.el.modal.addEventListener('close', resetClear);
 
   document.getElementById('history-period').addEventListener('change', refreshHistory);
+
+  // Згода на анонімну статистику — лише коли збірка має бекенд
+  const consent = /** @type {HTMLInputElement} */ (document.getElementById('stats-consent'));
+  document.getElementById('stats-optin').hidden = !FEATURES.resultsApi;
+  consent.checked = settings.shareStats !== false;
+  consent.addEventListener('change', () => (settings = storage.saveSettings({ shareStats: consent.checked })));
 
   // Тариф провайдера: зберігається і одразу перераховує частку
   const planInput = /** @type {HTMLInputElement} */ (document.getElementById('plan-input'));
@@ -298,6 +306,10 @@ async function onDone(results) {
     lastDeltas = compareResults(prev, results);
     ui.showDeltas(lastDeltas);
     await storage.addResult(results);
+    // Анонімна статистика на власному сервері (лише у self-hosted збірці і за згодою)
+    if (FEATURES.resultsApi && settings.shareStats !== false) {
+      submitResult(toPayload(results, serverMeta, { lightMode: lightMode() }), document.baseURI);
+    }
   } catch (e) {
     console.warn('Не вдалося зберегти результат', e);
   }

@@ -1,0 +1,28 @@
+{
+  "name": "speedtest-server",
+  "version": "1.0.0",
+  "description": "Сервер вимірювань і статистики для «Спідтесту»: Fastify + PostgreSQL + Redis",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "node src/migrate-cli.js",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "@fastify/helmet": "^13.1.1",
+    "@fastify/rate-limit": "^11.2.0",
+    "@fastify/static": "^10.1.5",
+    "fastify": "^5.12.5",
+    "ioredis": "^6.0.0",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.3"
+  }
+}

@@ -24,6 +24,8 @@ export default {
   'server.server': 'Сервер',
   'server.isp': 'Провайдер',
   'server.ip': 'IP-адреса',
+  'server.self': 'Власний сервер',
+  'stats.consent': 'Анонімно додавати мої результати в статистику цього сервера (без IP-адреси)',
   'server.detecting': 'Визначаю…',
   'server.unreachable': 'Сервер вимірювань недоступний. Перевірте з’єднання.',
 

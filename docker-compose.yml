@@ -1,0 +1,53 @@
+# Локальний запуск усього стеку:
+#   docker compose up -d --build     → http://localhost:8080
+#   docker compose logs -f app
+#   docker compose down               (дані БД лишаються у volume pgdata)
+name: speedtest
+
+services:
+  app:
+    build: .
+    image: speedtest:latest
+    ports:
+      - '${APP_PORT:-8080}:8080'
+    environment:
+      DATABASE_URL: postgres://speedtest:${POSTGRES_PASSWORD:-speedtest}@db:5432/speedtest
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # true, якщо перед сервером стоїть reverse proxy (nginx, Traefik, Caddy)
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: speedtest
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-speedtest}
+      POSTGRES_DB: speedtest
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U speedtest -d speedtest']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # Лише лічильники rate limit — зберігати на диск не потрібно
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:

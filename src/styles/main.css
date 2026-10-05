@@ -335,3 +335,16 @@ button {
   font: 700 12px var(--font-mono);
   letter-spacing: 0.04em;
 }
+
+.stats-optin {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.stats-optin input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-download);
+}

@@ -3,6 +3,27 @@
  * Усі параметри вимірювань зібрані тут, щоб їх можна було тюнити без змін у логіці.
  */
 
+/**
+ * Власний сервер (server/ у цьому репозиторії). Вмикається на етапі збірки:
+ * VITE_SELF_SERVER=true (так збирає Dockerfile). URL відносні — їх розв'язує resolveServerUrls().
+ */
+export const SELF_SERVER = {
+  id: 'self',
+  name: 'Self-hosted',
+  nameKey: 'server.self',
+  pingUrl: 'api/ping',
+  downloadUrl: 'api/download',
+  uploadUrl: 'api/upload',
+  metaUrl: 'api/meta',
+  serverTimingNames: ['app'],
+};
+
+// Саме `import.meta.env.VITE_…` (без проміжних змінних): Vite підставляє значення статично
+export const FEATURES = Object.freeze({
+  selfServer: import.meta.env.VITE_SELF_SERVER === 'true',
+  resultsApi: import.meta.env.VITE_RESULTS_API === 'true',
+});
+
 /** Перелік серверів-кандидатів. ServerSelector обирає найшвидший за пінгом. */
 export const SERVERS = [
   {
@@ -15,7 +36,24 @@ export const SERVERS = [
     // Час обробки на сервері (заголовок Server-Timing) — віднімається від RTT
     serverTimingNames: ['cfRequestDuration'],
   },
+  ...(FEATURES.selfServer ? [SELF_SERVER] : []),
 ];
+
+/**
+ * Робить URL сервера абсолютними відносно сторінки.
+ * Потрібно, бо воркер розв'язував би відносні шляхи від власного файлу (/assets/…).
+ * @template {Record<string, any>} S
+ * @param {S} server
+ * @param {string} base напр. document.baseURI
+ * @returns {S}
+ */
+export function resolveServerUrls(server, base) {
+  const out = /** @type {Record<string, any>} */ ({ ...server });
+  for (const key of ['pingUrl', 'downloadUrl', 'uploadUrl', 'metaUrl']) {
+    if (out[key]) out[key] = new URL(out[key], base).toString();
+  }
+  return /** @type {S} */ (out);
+}
 
 export const CONFIG = Object.freeze({
   /** Пінг у стані спокою (idle latency). */

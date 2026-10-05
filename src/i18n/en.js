@@ -24,6 +24,8 @@ export default {
   'server.server': 'Server',
   'server.isp': 'Provider',
   'server.ip': 'IP address',
+  'server.self': 'Self-hosted server',
+  'stats.consent': 'Anonymously add my results to this server’s statistics (no IP address)',
   'server.detecting': 'Detecting…',
   'server.unreachable': 'The measurement server is unreachable. Check your connection.',
 

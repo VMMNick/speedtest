@@ -22,8 +22,11 @@ const DEFAULT_CSV_HEADER = [
   'Стабільність',
 ];
 
-/** planMbps — тариф провайдера (Мбіт/с); lang — мова інтерфейсу (null — за браузером) */
-const DEFAULT_SETTINGS = { theme: 'system', sound: true, planMbps: null, lang: null };
+/**
+ * planMbps — тариф провайдера (Мбіт/с); lang — мова інтерфейсу (null — за браузером);
+ * shareStats — згода надсилати анонімний результат на власний сервер
+ */
+const DEFAULT_SETTINGS = { theme: 'system', sound: true, planMbps: null, lang: null, shareStats: true };
 
 const promisify = (req) =>
   new Promise((resolve, reject) => {
