@@ -18,7 +18,7 @@ export default [
     languageOptions: { globals: { ...globals.worker } },
   },
   {
-    files: ['tests/**/*.js', '*.config.js'],
+    files: ['tests/**/*.js', '*.config.js', 'config/**/*.js', 'scripts/**/*.js'],
     languageOptions: { globals: { ...globals.node } },
   },
   {
@@ -35,6 +35,10 @@ export default [
       'no-var': 'error',
       'object-shorthand': 'error',
     },
+  },
+  {
+    files: ['scripts/**/*.js'],
+    rules: { 'no-console': 'off' },
   },
   prettier,
 ];

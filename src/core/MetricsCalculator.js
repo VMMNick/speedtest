@@ -90,6 +90,24 @@ export function liveSpeed(samples, windowMs = 1000) {
   return bytesToMbps(last.bytes - ref.bytes, last.t - ref.t);
 }
 
+/**
+ * Ряд «живої» швидкості для графіка: те саме, що liveSpeed() для кожного префікса,
+ * але за один прохід (два вказівники) — O(n) замість O(n²).
+ * @param {{ t: number, bytes: number }[]} samples
+ * @param {number} windowMs
+ * @returns {{ t: number, mbps: number }[]}
+ */
+export function speedSeries(samples, windowMs = 1000) {
+  const out = [];
+  let j = 0; // найпізніший семпл, що старший за поточний щонайменше на windowMs
+  for (let k = 1; k < samples.length; k++) {
+    while (j + 1 < k && samples[k].t - samples[j + 1].t >= windowMs) j++;
+    const ref = samples[j];
+    out.push({ t: samples[k].t, mbps: bytesToMbps(samples[k].bytes - ref.bytes, samples[k].t - ref.t) });
+  }
+  return out;
+}
+
 /** Коефіцієнт варіації швидкостей (0 = ідеально рівно). */
 export function variation(values) {
   const m = mean(values);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { NetworkEngine, makePayload, fetchUpload, capChunk } from '../src/core/NetworkEngine.js';
+import { NetworkEngine, makePayload, getPayload, fetchUpload, capChunk } from '../src/core/NetworkEngine.js';
 import { ServerSelector } from '../src/services/ServerSelector.js';
 
 const server = {
@@ -296,6 +296,15 @@ describe('capChunk — обмеження розміру чанка за шви�
 });
 
 describe('Upload helpers', () => {
+  it('getPayload кешує payload між тестами — повторно випадкові дані не генеруються', () => {
+    getPayload(30_000_000); // прогріваємо кеш найбільшим розміром
+    const spy = vi.spyOn(globalThis.crypto, 'getRandomValues');
+    expect(getPayload(3_000_000).size).toBe(3_000_000);
+    expect(getPayload(30_000_000).size).toBe(30_000_000);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
   it('makePayload створює Blob потрібного розміру', () => {
     expect(makePayload(2_500_000).size).toBe(2_500_000);
     expect(makePayload(1000).size).toBe(1000);

@@ -6,8 +6,10 @@
  *                                         ▼
  *        UIController / ChartManager ◄── app.js ──► StorageManager
  */
+// Шрифти локально (без Google Fonts): unicode-range → браузер вантажить лише потрібні підмножини (латиниця/кирилиця)
+import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
 import { UIController, formatMbps, formatMs } from './ui/UIController.js';
-import { ChartManager } from './ui/ChartManager.js';
 import { ThemeManager } from './ui/ThemeManager.js';
 import { StorageManager } from './services/StorageManager.js';
 import { ServerSelector } from './services/ServerSelector.js';
@@ -15,7 +17,33 @@ import { ServerSelector } from './services/ServerSelector.js';
 const PHASE_NAMES = { ping: 'Пінг', download: 'Завантаження', upload: 'Вивантаження' };
 
 const ui = new UIController();
-const charts = new ChartManager();
+
+// ───────────── Графіки (ліниво) ─────────────
+// Chart.js — це ~90% усього JS. Він вантажиться окремим чанком лише коли знадобиться:
+// при наведенні/фокусі на «Старт» чи «Історію» (передзавантаження) або на першу вимогу.
+// Так він не впливає на перше відмальовування і не рахується як «невикористаний JS».
+
+/** @type {import('./ui/ChartManager.js').ChartManager | null} */
+let charts = null;
+/** @type {Promise<import('./ui/ChartManager.js').ChartManager | null> | null} */
+let chartsPromise = null;
+
+function loadCharts() {
+  chartsPromise ??= import('./ui/ChartManager.js')
+    .then(({ ChartManager }) => {
+      charts = new ChartManager();
+      charts.initLive(document.getElementById('live-chart'));
+      return charts;
+    })
+    .catch((e) => {
+      // Напр. офлайн: тест працює і без графіків, наступний виклик спробує знову
+      console.warn('Не вдалося завантажити графіки', e);
+      chartsPromise = null;
+      return null;
+    });
+  return chartsPromise;
+}
+
 const storage = new StorageManager();
 const selector = new ServerSelector();
 
@@ -24,7 +52,7 @@ const theme = new ThemeManager({
   initial: settings.theme,
   onSave: (mode) => (settings = storage.saveSettings({ theme: mode })),
 });
-theme.addEventListener('change', () => charts.updateTheme());
+theme.addEventListener('change', () => charts?.updateTheme());
 
 let worker = null;
 let selected = null; // { server, latency }
@@ -34,7 +62,13 @@ let running = false;
 
 async function init() {
   ui.setSound(settings.sound);
-  charts.initLive(document.getElementById('live-chart'));
+  // Передзавантаження графіків за наміром користувача
+  for (const id of ['btn-start', 'btn-history']) {
+    const el = document.getElementById(id);
+    ['pointerenter', 'focus', 'touchstart'].forEach((ev) =>
+      el.addEventListener(ev, () => loadCharts(), { once: true, passive: true }),
+    );
+  }
   await storage.init();
   bindEvents();
   detectServer();
@@ -106,8 +140,8 @@ async function startTest() {
   }
   running = true;
   ui.setRunning(true);
-  charts.resetLive();
-  unlockAudio();
+  unlockAudio(); // синхронно, поки діє жест користувача
+  (await loadCharts())?.resetLive();
 
   if (!selected?.reachable) {
     ui.setPhase('connecting');
@@ -146,7 +180,7 @@ function handleMessage(msg) {
       } else {
         ui.setGaugeValue(msg.value);
         ui.setMetric(msg.phase, msg.value);
-        charts.pushLive(msg.phase, msg.t, msg.value);
+        charts?.pushLive(msg.phase, msg.t, msg.value);
       }
       break;
 
@@ -220,7 +254,7 @@ async function refreshHistory() {
       refreshHistory();
     },
   });
-  charts.renderHistory(document.getElementById('history-chart'), entries);
+  (await loadCharts())?.renderHistory(document.getElementById('history-chart'), entries);
 }
 
 async function openHistory() {

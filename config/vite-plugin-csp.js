@@ -11,8 +11,6 @@ import { createHash } from 'node:crypto';
 /** Джерела, з якими застосунок має право спілкуватися. */
 export const CSP_SOURCES = {
   connect: ['https://speed.cloudflare.com'],
-  styles: ['https://fonts.googleapis.com'],
-  fonts: ['https://fonts.gstatic.com'],
 };
 
 const sha256 = (text) => `'sha256-${createHash('sha256').update(text, 'utf8').digest('base64')}'`;
@@ -30,8 +28,8 @@ export function buildPolicy(html) {
     'default-src': ["'none'"],
     'script-src': ["'self'", ...inlineScripts.map(sha256)],
     'worker-src': ["'self'"],
-    'style-src': ["'self'", ...CSP_SOURCES.styles],
-    'font-src': CSP_SOURCES.fonts,
+    'style-src': ["'self'"],
+    'font-src': ["'self'"],
     'img-src': ["'self'", 'data:'],
     'connect-src': ["'self'", ...CSP_SOURCES.connect],
     'manifest-src': ["'self'"],

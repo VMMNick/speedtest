@@ -14,6 +14,8 @@ export default defineConfig({
     outDir: r('./dist'),
     emptyOutDir: true,
     target: 'es2022',
+    // Не вбудовувати шрифти як data: URI — CSP дозволяє font-src лише 'self'
+    assetsInlineLimit: (file) => (/\.woff2?$/.test(file) ? false : undefined),
   },
   worker: {
     format: 'es',

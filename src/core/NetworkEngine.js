@@ -190,7 +190,7 @@ export class NetworkEngine {
 
   async measureUpload() {
     const settings = this.cfg.upload;
-    const payload = makePayload(settings.maxBytes);
+    const payload = getPayload(settings.maxBytes);
     return this._measureThroughput('upload', settings, (bytes, onBytes, signal) =>
       this.upload(this.server.uploadUrl, payload.slice(0, bytes, 'text/plain'), onBytes, signal),
     );
@@ -318,10 +318,7 @@ export class NetworkEngine {
         speeds.push(M.bytesToMbps(samples[i].bytes - samples[i - 1].bytes, dt));
       }
     }
-    const series = downsample(
-      samples.slice(1).map((s, i) => ({ t: s.t, mbps: M.liveSpeed(samples.slice(0, i + 2), this.cfg.liveWindowMs) })),
-      60,
-    );
+    const series = downsample(M.speedSeries(samples, this.cfg.liveWindowMs), 60);
 
     return {
       mbps,
@@ -332,6 +329,15 @@ export class NetworkEngine {
       loadedLatency: { ...M.summarizeLatency(loaded, loadedSent), samples: undefined },
     };
   }
+}
+
+/** @type {Blob | null} */
+let payloadCache = null;
+
+/** Payload кешується між тестами (воркер живе довше за один тест) — не генеруємо 20 МБ щоразу. */
+export function getPayload(totalBytes) {
+  if (!payloadCache || payloadCache.size < totalBytes) payloadCache = makePayload(totalBytes);
+  return payloadCache.size === totalBytes ? payloadCache : payloadCache.slice(0, totalBytes, 'text/plain');
 }
 
 /** Псевдовипадковий payload (нестискуваний), зібраний з 1 МБ блоку без копіювання. */

@@ -115,3 +115,31 @@ describe('MetricsCalculator — оцінки', () => {
     expect(Object.values(slow).some(Boolean)).toBe(false);
   });
 });
+
+describe('speedSeries — однопрохідний ряд швидкості', () => {
+  it('збігається з liveSpeed() для кожного префікса', () => {
+    // Нерівномірні інтервали й швидкості
+    let t = 0;
+    let bytes = 0;
+    const samples = [{ t: 0, bytes: 0 }];
+    for (let i = 0; i < 300; i++) {
+      t += 150 + ((i * 37) % 120);
+      bytes += ((i * 7919) % 50_000) + 1000;
+      samples.push({ t, bytes });
+    }
+    for (const window of [100, 400, 1000, 5000]) {
+      const fast = M.speedSeries(samples, window);
+      const naive = samples.slice(1).map((s, i) => ({ t: s.t, mbps: M.liveSpeed(samples.slice(0, i + 2), window) }));
+      expect(fast).toHaveLength(naive.length);
+      fast.forEach((p, i) => {
+        expect(p.t).toBe(naive[i].t);
+        expect(p.mbps).toBeCloseTo(naive[i].mbps, 9);
+      });
+    }
+  });
+
+  it('порожній і одноелементний вхід', () => {
+    expect(M.speedSeries([], 1000)).toEqual([]);
+    expect(M.speedSeries([{ t: 0, bytes: 0 }], 1000)).toEqual([]);
+  });
+});
