@@ -7,6 +7,10 @@ const int = (v, def) => (v === undefined || v === '' ? def : Number.parseInt(v, 
 const bool = (v, def) => (v === undefined || v === '' ? def : ['1', 'true', 'yes'].includes(String(v).toLowerCase()));
 
 export function loadConfig(env = process.env) {
+  // Render завжди задає RENDER=true. Там сервіс стоїть за проксі і на безкоштовному тарифі
+  // не повинен роздавати трафік вимірювань — розумні значення за замовчуванням,
+  // навіть якщо сервіс створено вручну, а не з render.yaml.
+  const onRender = env.RENDER === 'true';
   return {
     host: env.HOST ?? '0.0.0.0',
     port: int(env.PORT, 8080),
@@ -18,13 +22,13 @@ export function loadConfig(env = process.env) {
     /** Тека зі зібраним фронтендом (dist). null — сервер лише API */
     staticDir: env.STATIC_DIR ? resolve(env.STATIC_DIR) : null, // @fastify/static потребує абсолютний шлях
     /** За reverse proxy (nginx, Traefik) — щоб request.ip брався з X-Forwarded-For */
-    trustProxy: bool(env.TRUST_PROXY, false),
+    trustProxy: bool(env.TRUST_PROXY, onRender),
     /**
      * Ендпоінти download/upload. На безкоштовних хмарних тарифах (Render, Fly) їх варто
      * вимкнути: тест ганяє сотні МБ і швидко з'їдає ліміт трафіку. Тоді міряємо через Cloudflare,
      * а сервер лише збирає статистику.
      */
-    speedEndpoints: bool(env.SPEED_ENDPOINTS, true),
+    speedEndpoints: bool(env.SPEED_ENDPOINTS, !onRender),
     limits: {
       /** Максимальний розмір одного download/upload-запиту */
       maxTransferBytes: int(env.MAX_TRANSFER_BYTES, 100_000_000),

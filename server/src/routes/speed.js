@@ -46,6 +46,10 @@ export default async function speedRoutes(app, { maxTransferBytes, perMinute, tr
   };
   app.addContentTypeParser(['text/plain', 'application/octet-stream'], discardBody);
 
+  // Без download/upload вимірювати до цього сервера нема сенсу — тоді й ping/meta не віддаємо:
+  // ServerSelector на фронтенді побачить сервер недоступним і обере Cloudflare.
+  if (!transfers) return;
+
   app.get('/api/ping', { config: { rateLimit } }, async (request, reply) => {
     const ms = reply.elapsedTime;
     reply
@@ -60,9 +64,6 @@ export default async function speedRoutes(app, { maxTransferBytes, perMinute, tr
     // Формат як у speed.cloudflare.com/meta — фронтенду байдуже, хто відповідає
     return { clientIp: request.ip, asOrganization: null, city: null, country: null, colo: 'SELF' };
   });
-
-  // ping і meta — крихітні, лишаються завжди; download/upload — опційно (SPEED_ENDPOINTS)
-  if (!transfers) return;
 
   app.get(
     '/api/download',

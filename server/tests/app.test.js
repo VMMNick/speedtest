@@ -188,7 +188,7 @@ describe('статика', () => {
 });
 
 describe('SPEED_ENDPOINTS=false (хмарний тариф)', () => {
-  it('download/upload вимкнені, ping/meta/результати працюють', async () => {
+  it('вимірювальні ендпоінти вимкнені (фронтенд перейде на Cloudflare), результати працюють', async () => {
     const app = await buildApp({ config: loadConfig({ SPEED_ENDPOINTS: 'false' }), logger: false });
     expect((await app.inject('/api/download?bytes=100')).statusCode).toBe(404);
     expect(
@@ -201,9 +201,33 @@ describe('SPEED_ENDPOINTS=false (хмарний тариф)', () => {
         })
       ).statusCode,
     ).toBe(404);
-    expect((await app.inject('/api/ping')).statusCode).toBe(200);
-    expect((await app.inject('/api/meta')).statusCode).toBe(200);
+    expect((await app.inject('/api/ping')).statusCode).toBe(404);
+    expect((await app.inject('/api/meta')).statusCode).toBe(404);
+    expect((await app.inject('/api/health')).statusCode).toBe(200);
     expect((await app.inject({ method: 'POST', url: '/api/results', payload: validResult })).statusCode).toBe(201);
+    await app.close();
+  });
+});
+
+describe('значення за замовчуванням на Render (RENDER=true)', () => {
+  it('довіряє проксі й не роздає трафік вимірювань, якщо явно не задано інакше', () => {
+    expect(loadConfig({ RENDER: 'true' })).toMatchObject({ trustProxy: true, speedEndpoints: false });
+    expect(loadConfig({ RENDER: 'true', SPEED_ENDPOINTS: 'true', TRUST_PROXY: 'false' })).toMatchObject({
+      trustProxy: false,
+      speedEndpoints: true,
+    });
+    expect(loadConfig({})).toMatchObject({ trustProxy: false, speedEndpoints: true });
+  });
+
+  it('за проксі rate limit рахується по справжній IP клієнта (X-Forwarded-For)', async () => {
+    const env = { RENDER: 'true', RATE_RESULTS_PER_MIN: '1' };
+    const app = await buildApp({ config: loadConfig(env), logger: false });
+    const post = (ip) =>
+      app.inject({ method: 'POST', url: '/api/results', payload: validResult, headers: { 'x-forwarded-for': ip } });
+    expect((await post('198.51.100.1')).statusCode).toBe(201);
+    expect((await post('198.51.100.1')).statusCode).toBe(429);
+    // Інший клієнт за тим самим проксі — не страждає від чужого ліміту
+    expect((await post('198.51.100.2')).statusCode).toBe(201);
     await app.close();
   });
 });
