@@ -38,6 +38,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * @property {'ok' | 'down'} [ping]      'down' — сервер недоступний
  * @property {number} [downloadStatus]   HTTP-статус для /__down (напр. 429)
  * @property {number} [bytesPerMs]       «пропускна здатність» підмінного сервера
+ * @property {object} [meta]             відповідь /meta (за замовчуванням META)
  */
 
 /**
@@ -45,13 +46,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * @param {MockOptions} [opts]
  */
 export async function mockCloudflare(context, opts = {}) {
-  const { latencyMs = 12, ping = 'ok', downloadStatus = 200, bytesPerMs = 20_000 } = opts;
+  const { latencyMs = 12, ping = 'ok', downloadStatus = 200, bytesPerMs = 20_000, meta = META } = opts;
   await context.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   await context.route('https://speed.cloudflare.com/**', async (route) => {
     const url = new URL(route.request().url());
     const bytes = Number(url.searchParams.get('bytes') || 0);
 
-    if (url.pathname === '/meta') return route.fulfill({ headers: CORS, json: META });
+    if (url.pathname === '/meta') return route.fulfill({ headers: CORS, json: meta });
 
     if (url.pathname === '/__down' && bytes === 0) {
       if (ping === 'down') return route.abort('connectionrefused');

@@ -49,6 +49,9 @@
   gap: 12px;
   min-width: 0;
 }
+.server-bar__item > div {
+  min-width: 0; /* інакше довгий текст не обрізається і наїжджає на сусідній блок */
+}
 .server-bar__item .icon {
   color: var(--color-download);
 }

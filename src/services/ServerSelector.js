@@ -57,15 +57,34 @@ export class ServerSelector {
       if (!res.ok) return null;
       const m = await res.json();
       return {
-        ip: m.clientIp ?? null,
-        isp: m.asOrganization ?? null,
+        ip: text(m.clientIp),
+        isp: text(m.asOrganization),
         asn: m.asn ?? null,
-        city: m.city ?? null,
-        country: m.country ?? null,
-        colo: m.colo ?? null,
+        city: text(m.city),
+        country: text(m.country),
+        colo: coloCode(m.colo),
       };
     } catch {
       return null;
     }
   }
+}
+
+/** Рядок або null — щоб в інтерфейс ніколи не потрапило «[object Object]» */
+function text(v) {
+  return typeof v === 'string' && v.trim() ? v.trim() : typeof v === 'number' ? String(v) : null;
+}
+
+/**
+ * Код точки присутності Cloudflare. Раніше `colo` був рядком («WAW»),
+ * тепер може приходити об'єктом ({ iata: 'WAW', city: 'Warsaw', … }).
+ * @param {unknown} colo
+ * @returns {string | null}
+ */
+export function coloCode(colo) {
+  if (colo && typeof colo === 'object') {
+    const o = /** @type {Record<string, unknown>} */ (colo);
+    return text(o.iata) ?? text(o.code) ?? text(o.id) ?? text(o.city) ?? text(o.name);
+  }
+  return text(colo);
 }

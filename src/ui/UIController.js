@@ -339,7 +339,9 @@ export class UIController {
     const name = server.nameKey ? t(server.nameKey) : server.name;
     this.el.serverName.textContent =
       [name, loc].filter(Boolean).join(' · ') + (latency ? ` · ${formatMs(latency)} ${t('unit.ms')}` : '');
+    this.el.serverName.title = this.el.serverName.textContent;
     this.el.serverIsp.textContent = meta?.isp ?? '—';
+    this.el.serverIsp.title = meta?.isp ?? '';
     this.el.serverIp.textContent = meta?.ip ?? '—';
   }
 

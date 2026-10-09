@@ -7,7 +7,7 @@ import {
   capChunk,
   subtractServer,
 } from '../src/core/NetworkEngine.js';
-import { ServerSelector } from '../src/services/ServerSelector.js';
+import { ServerSelector, coloCode } from '../src/services/ServerSelector.js';
 
 const server = {
   id: 'mock',
@@ -447,5 +447,28 @@ describe('ServerSelector', () => {
   it('fetchMeta нормалізує метадані', async () => {
     const sel = new ServerSelector({ servers: [server], fetchImpl: mockFetch() });
     expect(await sel.fetchMeta(server)).toMatchObject({ ip: '1.2.3.4', isp: 'Test ISP', city: 'Kyiv', colo: 'KBP' });
+  });
+
+  it('fetchMeta: colo-об’єкт і нестрокові поля не дають «[object Object]»', async () => {
+    const fetchImpl = async () =>
+      new Response(
+        JSON.stringify({
+          clientIp: '1.2.3.4',
+          asOrganization: { name: 'x' },
+          city: 'Uzhhorod',
+          colo: { iata: 'WAW', city: 'Warsaw', lat: 52.1 },
+        }),
+      );
+    const sel = new ServerSelector({ servers: [server], fetchImpl });
+    const meta = await sel.fetchMeta(server);
+    expect(meta).toMatchObject({ city: 'Uzhhorod', colo: 'WAW', isp: null });
+  });
+
+  it('coloCode', () => {
+    expect(coloCode('KBP')).toBe('KBP');
+    expect(coloCode({ iata: 'WAW' })).toBe('WAW');
+    expect(coloCode({ city: 'Warsaw' })).toBe('Warsaw');
+    expect(coloCode({})).toBeNull();
+    expect(coloCode(null)).toBeNull();
   });
 });
