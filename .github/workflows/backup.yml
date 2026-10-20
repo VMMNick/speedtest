@@ -35,12 +35,13 @@ jobs:
         run: |
           mkdir -p backup
           file="backup/speedtest-$(date -u +%Y-%m-%dT%H%M).dump"
-          # Клієнт тієї ж мажорної версії, що й сервер (PG 17); формат custom — стиснутий,
+          # pg_dump не працює із сервером НОВІШОЇ мажорної версії (Neon — PG 18), а старіші
+          # сервери підтримує, тож клієнт беремо з запасом. Формат custom — стиснутий,
           # відновлюється вибірково через pg_restore
-          docker run --rm -e URL="$DATABASE_BACKUP_URL" postgres:17 \
+          docker run --rm -e URL="$DATABASE_BACKUP_URL" postgres:18 \
             sh -c 'pg_dump --format=custom --no-owner --no-acl "$URL"' > "$file"
           # Перевірка, що архів читається і містить таблицю results
-          docker run --rm -i postgres:17 pg_restore --list < "$file" | grep -q 'TABLE public results'
+          docker run --rm -i postgres:18 pg_restore --list < "$file" | grep -q 'TABLE public results'
           ls -lh backup
 
       - uses: actions/upload-artifact@v7

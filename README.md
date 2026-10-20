@@ -162,7 +162,7 @@ docker compose up -d --build   # http://localhost:8080
 - **Безкоштовні тарифи:** сервіс засинає після 15 хв простою (перше відкриття ~1 хв), безкоштовна PostgreSQL живе 30 днів, Key Value не зберігається на диск. Для постійної роботи — платні плани в `render.yaml`.
 - **Якщо сервіс створено вручну** (не з `render.yaml`): сервер сам бачить `RENDER=true` і за замовчуванням довіряє проксі (`TRUST_PROXY`) та вимикає ендпоінти вимірювань (`SPEED_ENDPOINTS`) — фронтенд тоді автоматично міряє через Cloudflare. Без `REDIS_URL` rate limit і кеш працюють у пам'яті процесу.
 - **Постійна база — Neon** (безкоштовна PostgreSQL без терміну дії): у веб-сервісі достатньо замінити `DATABASE_URL` на рядок підключення Neon (`…-pooler…/neondb?sslmode=verify-full`); таблиці створяться міграціями при старті.
-- **Щоденний бекап** (`.github/workflows/backup.yml`): `pg_dump` у форматі custom зберігається як артефакт Actions на 30 днів; запуск і вручну (Actions → DB backup → Run workflow). Потрібен секрет `DATABASE_BACKUP_URL` — **прямий** рядок Neon (без `-pooler`). Відновлення: `pg_restore --no-owner --clean --if-exists -d "$DATABASE_URL" speedtest-….dump`.
+- **Щоденний бекап** (`.github/workflows/backup.yml`): `pg_dump` (клієнт PostgreSQL 18 — не старший за сервер) у форматі custom зберігається як артефакт Actions на 30 днів; запуск і вручну (Actions → DB backup → Run workflow). Потрібен секрет `DATABASE_BACKUP_URL` — **прямий** рядок Neon (без `-pooler`). Відновлення: `pg_restore --no-owner --clean --if-exists -d "$DATABASE_URL" speedtest-….dump`.
 - Хмарна збірка перевіряється в CI окремим E2E (`npm run test:e2e:cloud`) і збіркою Docker-образу з `BUILD_MODE=cloud`.
 
 Без Docker:
