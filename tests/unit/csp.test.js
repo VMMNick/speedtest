@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createHash } from 'node:crypto';
-import { buildPolicy } from '../config/vite-plugin-csp.js';
+import { buildPolicy } from '../../config/vite-plugin-csp.js';
 
 const directive = (policy, name) =>
   policy

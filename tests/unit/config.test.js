@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { CONFIG, LIGHT_CONFIG, detectLightMode, mergeDeep } from '../src/core/config.js';
-import { scaleFor } from '../src/ui/UIController.js';
+import { CONFIG, LIGHT_CONFIG, detectLightMode, mergeDeep } from '../../src/core/config.js';
+import { scaleFor } from '../../src/core/gauge.js';
 
 describe('економний режим', () => {
   it('detectLightMode: Save-Data або повільна мережа', () => {

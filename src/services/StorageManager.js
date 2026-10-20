@@ -10,18 +10,6 @@ const STORE = 'history';
 const LS_HISTORY = 'speedtest:history';
 const LS_SETTINGS = 'speedtest:settings';
 
-/** Заголовки CSV за замовчуванням (застосунок передає локалізовані) */
-const DEFAULT_CSV_HEADER = [
-  'Дата',
-  'Сервер',
-  'Пінг, мс',
-  'Джиттер, мс',
-  'Втрати, %',
-  'Download, Мбіт/с',
-  'Upload, Мбіт/с',
-  'Стабільність',
-];
-
 /**
  * planMbps — тариф провайдера (Мбіт/с); lang — мова інтерфейсу (null — за браузером);
  * shareStats — згода надсилати анонімний результат на власний сервер
@@ -171,7 +159,11 @@ export class StorageManager {
    * @param {import('../core/types.js').TestResult[]} entries
    * @param {string[]} [head] заголовки колонок (локалізовані)
    */
-  static toCSV(entries, head = DEFAULT_CSV_HEADER) {
+  /**
+   * @param {any[]} entries
+   * @param {string[]} head локалізовані заголовки колонок (тексти інтерфейсу живуть в i18n/)
+   */
+  static toCSV(entries, head) {
     const rows = entries.map((e) => [
       new Date(e.timestamp).toISOString(),
       e.server?.name ?? '',

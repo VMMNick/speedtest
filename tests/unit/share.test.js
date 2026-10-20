@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { encodeResult, decodeResult, shareUrl, parseShareHash } from '../src/core/share.js';
-import { precacheList } from '../config/vite-plugin-sw.js';
+import { encodeResult, decodeResult, shareUrl, parseShareHash } from '../../src/core/share.js';
+import { precacheList } from '../../config/vite-plugin-sw.js';
 
 const result = {
   timestamp: 1_790_000_000_000,

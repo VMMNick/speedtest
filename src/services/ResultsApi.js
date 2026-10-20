@@ -4,30 +4,39 @@
  * IP-адреса не надсилається; провайдер/місто/країна — лише якщо їх повернув /meta.
  */
 
+import { RESULT_LIMITS, TEXT_MAX, COUNTRY_RE } from '../../shared/result-schema.js';
+
+/** Округлення до сотих і обмеження межами схеми — сервер не відхилить запит через викид */
+const fit = (x, max) => Math.min(max, Math.max(0, Math.round((Number(x) || 0) * 100) / 100));
+
+/** Лише непорожній рядок, обрізаний до межі схеми (об'єкт не стане «[object Object]») */
+const text = (v) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, TEXT_MAX) : null);
+
 /**
- * Перетворює результат тесту на тіло запиту (суворо за схемою сервера).
+ * Перетворює результат тесту на тіло запиту за спільною схемою (shared/result-schema.js).
  * @param {import('../core/types.js').TestResult} r
  * @param {{ isp?: string | null, city?: string | null, country?: string | null } | null} meta
  * @param {{ lightMode?: boolean }} [extra]
  */
 export function toPayload(r, meta, { lightMode = false } = {}) {
-  const round = (x) => Math.round(x * 100) / 100;
   /** @type {Record<string, unknown>} */
   const body = {
     server: r.server?.id === 'self' ? 'self' : 'cloudflare',
-    download: round(r.download.mbps),
-    upload: round(r.upload.mbps),
-    ping: round(r.ping.median),
-    jitter: round(r.ping.jitter),
-    loss: round(r.ping.loss),
+    download: fit(r.download.mbps, RESULT_LIMITS.download),
+    upload: fit(r.upload.mbps, RESULT_LIMITS.upload),
+    ping: fit(r.ping.median, RESULT_LIMITS.ping),
+    jitter: fit(r.ping.jitter, RESULT_LIMITS.jitter),
+    loss: fit(r.ping.loss, RESULT_LIMITS.loss),
     grade: r.stability.grade,
-    score: Math.round(r.stability.score),
-    bufferbloat: round(r.bufferbloat?.delta ?? 0),
+    score: Math.round(fit(r.stability.score, RESULT_LIMITS.score)),
+    bufferbloat: fit(r.bufferbloat?.delta ?? 0, RESULT_LIMITS.bufferbloat),
     lightMode,
   };
-  if (meta?.isp) body.isp = String(meta.isp).slice(0, 100);
-  if (meta?.city) body.city = String(meta.city).slice(0, 100);
-  if (meta?.country && /^[A-Z]{2}$/.test(meta.country)) body.country = meta.country;
+  const isp = text(meta?.isp);
+  const city = text(meta?.city);
+  if (isp) body.isp = isp;
+  if (city) body.city = city;
+  if (typeof meta?.country === 'string' && COUNTRY_RE.test(meta.country)) body.country = meta.country;
   return body;
 }
 

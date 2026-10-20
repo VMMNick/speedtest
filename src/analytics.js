@@ -7,7 +7,7 @@ import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
 import { ThemeManager } from './ui/ThemeManager.js';
 import { StorageManager } from './services/StorageManager.js';
-import { formatMbps, formatMs } from './ui/UIController.js';
+import { formatMbps, formatMs } from './ui/format.js';
 import { t, setLang, getLang, detectLang, applyDom, getLocale } from './i18n/index.js';
 import { heatBins, binOf, bestAndWorst } from './core/heatmap.js';
 

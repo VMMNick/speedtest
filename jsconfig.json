@@ -13,6 +13,6 @@
     "skipLibCheck": true,
     "types": ["vite/client"]
   },
-  "include": ["src/**/*.js"],
+  "include": ["src/**/*.js", "shared/**/*.js"],
   "exclude": ["node_modules", "dist"]
 }

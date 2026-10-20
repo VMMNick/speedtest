@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import * as M from '../src/core/MetricsCalculator.js';
+import * as M from '../../src/core/MetricsCalculator.js';
 
 describe('MetricsCalculator — базова статистика', () => {
   it('mean / median / percentile', () => {

@@ -2,7 +2,8 @@
  * PNG-картка результату (1200×630 — стандартний розмір прев'ю для соцмереж).
  * Малюється на <canvas> без сторонніх бібліотек; модуль вантажиться ліниво.
  */
-import { formatMbps, formatMs, valueToFraction } from './UIController.js';
+import { formatMbps, formatMs } from './format.js';
+import { valueToFraction } from '../core/gauge.js';
 import { CONFIG } from '../core/config.js';
 import { t, getLocale } from '../i18n/index.js';
 

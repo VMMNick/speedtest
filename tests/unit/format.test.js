@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formatMbps, formatMs, formatBytes, valueToFraction } from '../src/ui/UIController.js';
+import { formatMbps, formatMs, formatBytes } from '../../src/ui/format.js';
+import { valueToFraction } from '../../src/core/gauge.js';
 
 describe('форматування', () => {
   it('formatMbps: точність залежить від величини, гігабіти — без суфіксів', () => {

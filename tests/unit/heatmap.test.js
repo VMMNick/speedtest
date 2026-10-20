@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { heatBins, binOf, bestAndWorst, LEVELS } from '../src/core/heatmap.js';
+import { heatBins, binOf, bestAndWorst, LEVELS } from '../../src/core/heatmap.js';
 
 describe('heatBins / binOf', () => {
   it('5 рівних інтервалів від мінімуму до максимуму', () => {

@@ -5,7 +5,7 @@ import {
   filterByPeriod,
   sparklinePoints,
   SAME_THRESHOLD_PCT,
-} from '../src/core/insights.js';
+} from '../../src/core/insights.js';
 
 const result = (download, upload, ping, jitter) => ({
   download: { mbps: download },

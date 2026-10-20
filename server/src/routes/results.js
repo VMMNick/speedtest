@@ -5,31 +5,11 @@
  *   GET  /api/results/stats  — зведення за період
  */
 
-const num = (max) => ({ type: 'number', minimum: 0, maximum: max });
-const text = (max) => ({ type: 'string', maxLength: max });
-
-export const resultSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['server', 'download', 'upload', 'ping', 'jitter', 'loss', 'grade', 'score'],
-  properties: {
-    server: { type: 'string', enum: ['self', 'cloudflare'] },
-    download: num(100_000),
-    upload: num(100_000),
-    ping: num(60_000),
-    jitter: num(60_000),
-    loss: num(100),
-    grade: { type: 'string', enum: ['A', 'B', 'C', 'D', 'F'] },
-    score: num(100),
-    bufferbloat: num(60_000),
-    isp: text(100),
-    city: text(100),
-    country: { type: 'string', pattern: '^[A-Z]{2}$' },
-    lightMode: { type: 'boolean' },
-  },
-};
-
 import { bumpDataVersion } from '../cache.js';
+import { resultSchema } from '../../../shared/result-schema.js';
+
+// Схема спільна з фронтендом — див. shared/result-schema.js
+export { resultSchema };
 
 /** @type {import('fastify').FastifyPluginAsync<{ repo: any, perMinute: number, redis?: import('ioredis').Redis }>} */
 export default async function resultsRoutes(app, { repo, perMinute, redis }) {

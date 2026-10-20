@@ -6,6 +6,8 @@
 import { CONFIG } from '../core/config.js';
 import { planShare, sparklinePoints } from '../core/insights.js';
 import { t, getLocale } from '../i18n/index.js';
+import { formatMbps, formatMs, formatBytes } from './format.js';
+import { scaleFor, valueToFraction } from '../core/gauge.js';
 
 /** @returns {HTMLElement} */
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -16,52 +18,10 @@ const R = 118;
 const START_DEG = 135;
 const SWEEP_DEG = 270;
 
-const PING_SCALE = [0, 5, 10, 20, 30, 50, 75, 100, 150, 250, 500, 1000];
-
-export const formatMbps = (v) => {
-  if (v == null || Number.isNaN(v)) return '—';
-  // ≥ 100 — цілі числа (у т. ч. гігабітні канали: «1234», а не «1.23k» — так однозначніше й парситься)
-  if (v >= 100) return v.toFixed(0);
-  if (v >= 10) return v.toFixed(1);
-  return v.toFixed(2);
-};
-export const formatMs = (v) => (v == null || Number.isNaN(v) ? '—' : v >= 100 ? v.toFixed(0) : v.toFixed(1));
-export const formatBytes = (b) => {
-  const u = t('unit.bytes').split('|');
-  if (!b) return `0 ${u[0]}`;
-  const i = Math.min(u.length - 1, Math.floor(Math.log(b) / Math.log(1024)));
-  return `${(b / 1024 ** i).toFixed(i ? 1 : 0)} ${u[i]}`;
-};
-
 const polar = (deg, r = R) => {
   const a = (deg * Math.PI) / 180;
   return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
 };
-
-/**
- * Шкала датчика: пінг — своя; швидкість — до 1 Гбіт/с, а якщо значення більше —
- * мультигігабітна (до 10 Гбіт/с).
- * @param {'ping' | 'speed'} kind
- * @param {number} value
- */
-export function scaleFor(kind, value = 0) {
-  if (kind === 'ping') return PING_SCALE;
-  return value > CONFIG.gaugeScale[CONFIG.gaugeScale.length - 1] ? CONFIG.gaugeScaleGigabit : CONFIG.gaugeScale;
-}
-
-/** Значення → частка шкали (0..1) з нелінійною шкалою. */
-export function valueToFraction(value, scale) {
-  if (value <= scale[0]) return 0;
-  const last = scale.length - 1;
-  if (value >= scale[last]) return 1;
-  for (let i = 0; i < last; i++) {
-    if (value <= scale[i + 1]) {
-      const local = (value - scale[i]) / (scale[i + 1] - scale[i]);
-      return (i + local) / last;
-    }
-  }
-  return 1;
-}
 
 export class UIController {
   constructor() {

@@ -6,8 +6,8 @@ import {
   fetchUpload,
   capChunk,
   subtractServer,
-} from '../src/core/NetworkEngine.js';
-import { ServerSelector, coloCode } from '../src/services/ServerSelector.js';
+} from '../../src/core/NetworkEngine.js';
+import { ServerSelector, coloCode } from '../../src/services/ServerSelector.js';
 
 const server = {
   id: 'mock',

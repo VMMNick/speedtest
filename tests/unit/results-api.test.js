@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { toPayload, submitResult } from '../src/services/ResultsApi.js';
-import { SELF_SERVER, resolveServerUrls } from '../src/core/config.js';
-import { resultSchema } from '../server/src/routes/results.js';
+import { toPayload, submitResult } from '../../src/services/ResultsApi.js';
+import { SELF_SERVER, resolveServerUrls } from '../../src/core/config.js';
+import { resultSchema } from '../../shared/result-schema.js';
 
 const result = {
   timestamp: 1,

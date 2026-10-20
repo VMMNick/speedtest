@@ -1,53 +1,37 @@
 /**
- * Точка входу: ініціалізує модулі та оркеструє тест.
+ * Точка входу (composition root): створює модулі, з'єднує їх і оркеструє тест.
+ * Уся логіка вимірювань — у core/ (у воркері), робота з DOM — в ui/, введення-виведення — в services/.
  *
  *  ServerSelector ──► (server) ──► speed.worker (NetworkEngine)
  *                                         │ postMessage
  *                                         ▼
- *        UIController / ChartManager ◄── app.js ──► StorageManager
+ *   UIController / charts / HistoryPanel / SharePanel ◄── app.js ──► StorageManager, ResultsApi
  */
 // Шрифти локально (без Google Fonts): unicode-range → браузер вантажить лише потрібні підмножини (латиниця/кирилиця)
 import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
-import { UIController, formatMbps, formatMs } from './ui/UIController.js';
-import { ThemeManager } from './ui/ThemeManager.js';
-import { StorageManager } from './services/StorageManager.js';
 import { LIGHT_CONFIG, SERVERS, FEATURES, detectLightMode, mergeDeep, resolveServerUrls } from './core/config.js';
-import { toPayload, submitResult } from './services/ResultsApi.js';
-import { compareResults, filterByPeriod } from './core/insights.js';
-import { parseShareHash, shareUrl } from './core/share.js';
+import { compareResults } from './core/insights.js';
 import { t, setLang, getLang, detectLang, applyDom } from './i18n/index.js';
+import { StorageManager } from './services/StorageManager.js';
 import { ServerSelector } from './services/ServerSelector.js';
+import { toPayload, submitResult } from './services/ResultsApi.js';
+import { createChime } from './services/sound.js';
+import { registerServiceWorker } from './services/pwa.js';
+import { UIController } from './ui/UIController.js';
+import { ThemeManager } from './ui/ThemeManager.js';
+import { HistoryPanel } from './ui/HistoryPanel.js';
+import { SharePanel } from './ui/SharePanel.js';
+import { createChartsLoader } from './ui/lazyCharts.js';
+import { formatMbps, formatMs } from './ui/format.js';
+import { byId } from './ui/dom.js';
 
 const phaseName = (phase) => t(`phase.${phase}`);
 
 const ui = new UIController();
 
-// ───────────── Графіки (ліниво) ─────────────
-// Chart.js — це ~90% усього JS. Він вантажиться окремим чанком лише коли знадобиться:
-// при наведенні/фокусі на «Старт» чи «Історію» (передзавантаження) або на першу вимогу.
-// Так він не впливає на перше відмальовування і не рахується як «невикористаний JS».
-
-/** @type {import('./ui/ChartManager.js').ChartManager | null} */
-let charts = null;
-/** @type {Promise<import('./ui/ChartManager.js').ChartManager | null> | null} */
-let chartsPromise = null;
-
-function loadCharts() {
-  chartsPromise ??= import('./ui/ChartManager.js')
-    .then(({ ChartManager }) => {
-      charts = new ChartManager();
-      charts.initLive(document.getElementById('live-chart'));
-      return charts;
-    })
-    .catch((e) => {
-      // Напр. офлайн: тест працює і без графіків, наступний виклик спробує знову
-      console.warn('Не вдалося завантажити графіки', e);
-      chartsPromise = null;
-      return null;
-    });
-  return chartsPromise;
-}
+const charts = createChartsLoader(() => byId('live-chart'));
+const loadCharts = () => charts.load();
 
 const storage = new StorageManager();
 // URL серверів — абсолютні (відносні розв'язувались би у воркері від /assets/)
@@ -58,11 +42,20 @@ const theme = new ThemeManager({
   initial: settings.theme,
   onSave: (mode) => (settings = storage.saveSettings({ theme: mode })),
 });
-theme.addEventListener('change', () => charts?.updateTheme());
+theme.addEventListener('change', () => charts.current?.updateTheme());
 
 let worker = null;
 let selected = null; // { server, latency }
 let running = false;
+/** Останній результат — для частки від тарифу, «Поділитися» і повторного показу після зміни мови */
+let lastResult = null;
+/** Порівняння з попереднім — для повторного показу після зміни мови */
+let lastDeltas = null;
+let hasRun = false;
+
+const chime = createChime();
+const historyPanel = new HistoryPanel({ ui, storage, loadCharts });
+const sharePanel = new SharePanel({ ui, getResult: () => lastResult, isRunning: () => running });
 /** Метадані з'єднання (місто, провайдер, IP) */
 let serverMeta = null;
 /** Пінги поточного тесту — для спарклайна */
@@ -73,26 +66,25 @@ let pingLive = [];
 /** Економний режим: Save-Data або повільна мережа (Network Information API, де підтримується). */
 const connection = /** @type {any} */ (navigator).connection;
 const lightMode = () => detectLightMode(connection);
-const showModeNote = () => (document.getElementById('mode-note').hidden = !lightMode());
+const showModeNote = () => (byId('mode-note').hidden = !lightMode());
 
 async function init() {
   applyLanguage(settings.lang ?? detectLang(navigator.languages));
   ui.setSound(settings.sound);
   showModeNote();
   connection?.addEventListener?.('change', showModeNote);
-  // Передзавантаження графіків за наміром користувача
-  for (const id of ['btn-start', 'btn-history']) {
-    const el = document.getElementById(id);
-    ['pointerenter', 'focus', 'touchstart'].forEach((ev) =>
-      el.addEventListener(ev, () => loadCharts(), { once: true, passive: true }),
-    );
-  }
+  charts.preloadOn([byId('btn-start'), byId('btn-history')]);
   await storage.init();
   bindEvents();
-  bindShare();
-  showSharedFromUrl();
+  historyPanel.bind();
+  sharePanel.bind();
+  sharePanel.showFromUrl();
   detectServer();
-  registerServiceWorker();
+  registerServiceWorker({
+    canReload: () => !running,
+    onUpdateReady: (apply) =>
+      ui.toast(t('toast.update'), 'info', 0, { label: t('toast.updateAction'), onClick: apply }),
+  });
 }
 
 async function detectServer() {
@@ -106,59 +98,32 @@ async function detectServer() {
 function bindEvents() {
   ui.el.start.addEventListener('click', startTest);
   ui.el.stop.addEventListener('click', stopTest);
-  document.getElementById('btn-theme').addEventListener('click', () => theme.toggle());
-  document.getElementById('btn-lang').addEventListener('click', () => {
+  byId('btn-theme').addEventListener('click', () => theme.toggle());
+  byId('btn-lang').addEventListener('click', () => {
     const next = getLang() === 'uk' ? 'en' : 'uk';
     settings = storage.saveSettings({ lang: next });
     applyLanguage(next);
   });
-  document.getElementById('btn-sound').addEventListener('click', () => {
+  byId('btn-sound').addEventListener('click', () => {
     settings = storage.saveSettings({ sound: !settings.sound });
     ui.setSound(settings.sound);
   });
-  document.getElementById('btn-history').addEventListener('click', openHistory);
-  // Очищення — у два кліки: перший просить підтвердження, другий (протягом 4 с) очищає
-  const clearBtn = document.getElementById('btn-clear');
-  let confirmTimer = 0;
-  const resetClear = () => {
-    clearTimeout(confirmTimer);
-    clearBtn.classList.remove('is-confirm');
-    clearBtn.textContent = t('history.clear');
-  };
-  clearBtn.addEventListener('click', async () => {
-    if (!(await storage.getHistory()).length) return;
-    if (!clearBtn.classList.contains('is-confirm')) {
-      clearBtn.classList.add('is-confirm');
-      clearBtn.textContent = t('history.clearConfirm');
-      confirmTimer = window.setTimeout(resetClear, 4000);
-      return;
-    }
-    resetClear();
-    await storage.clearHistory();
-    await refreshHistory();
-    ui.toast(t('history.cleared'));
-  });
-  ui.el.modal.addEventListener('close', resetClear);
-
-  document.getElementById('history-period').addEventListener('change', refreshHistory);
-
   // Згода на анонімну статистику — лише коли збірка має бекенд
-  const consent = /** @type {HTMLInputElement} */ (document.getElementById('stats-consent'));
-  document.getElementById('stats-optin').hidden = !FEATURES.resultsApi;
+  const consent = /** @type {HTMLInputElement} */ (byId('stats-consent'));
+  byId('stats-optin').hidden = !FEATURES.resultsApi;
   // Аналітика є лише там, де є бекенд зі статистикою
-  document.getElementById('link-analytics').hidden = !FEATURES.resultsApi;
+  byId('link-analytics').hidden = !FEATURES.resultsApi;
   consent.checked = settings.shareStats !== false;
   consent.addEventListener('change', () => (settings = storage.saveSettings({ shareStats: consent.checked })));
 
   // Тариф провайдера: зберігається і одразу перераховує частку
-  const planInput = /** @type {HTMLInputElement} */ (document.getElementById('plan-input'));
+  const planInput = /** @type {HTMLInputElement} */ (byId('plan-input'));
   if (settings.planMbps) planInput.value = String(settings.planMbps);
   planInput.addEventListener('input', () => {
     const v = Number(planInput.value);
     settings = storage.saveSettings({ planMbps: v > 0 ? v : null });
     if (lastResult) ui.showPlan(lastResult.download.mbps, settings.planMbps);
   });
-  document.getElementById('btn-export').addEventListener('click', exportCSV);
 
   document.addEventListener('keydown', (e) => {
     // Enter/Space на кнопці чи посиланні — це їхній власний клік, не старт тесту
@@ -201,9 +166,9 @@ async function startTest() {
   }
   running = true;
   pingLive = [];
-  hideShared();
+  sharePanel.hideShared();
   ui.setRunning(true);
-  unlockAudio(); // синхронно, поки діє жест користувача
+  if (settings.sound) chime.unlock(); // синхронно, поки діє жест користувача
   (await loadCharts())?.resetLive();
 
   if (!selected?.reachable) {
@@ -246,7 +211,7 @@ function handleMessage(msg) {
       } else {
         ui.setGaugeValue(msg.value);
         ui.setMetric(msg.phase, msg.value);
-        charts?.pushLive(msg.phase, msg.t, msg.value);
+        charts.current?.pushLive(msg.phase, msg.t, msg.value);
       }
       break;
 
@@ -284,12 +249,6 @@ function handleMessage(msg) {
   }
 }
 
-/** Останній результат — щоб перерахувати частку від тарифу при зміні поля */
-let lastResult = null;
-/** Порівняння з попереднім — для повторного показу після зміни мови */
-let lastDeltas = null;
-let hasRun = false;
-
 async function onDone(results) {
   lastResult = results;
   results.server = { ...results.server, latency: selected?.latency ?? null };
@@ -301,7 +260,7 @@ async function onDone(results) {
   ui.setSparkline(results.ping.samples ?? []);
   ui.showPlan(results.download.mbps, settings.planMbps);
   finish();
-  if (settings.sound) playChime();
+  if (settings.sound) chime.play();
   try {
     // Порівнюємо з попереднім тестом ДО збереження нового
     const [prev] = await storage.getHistory();
@@ -322,196 +281,10 @@ function finish() {
   ui.setRunning(false);
   hasRun = true;
   ui.setStartLabel(t('btn.again'));
-  if (document.getElementById('gauge').dataset.phase !== 'done') {
+  if (byId('gauge').dataset.phase !== 'done') {
     ui.setPhase('idle');
     ui.setGaugeValue(0);
   }
-}
-
-// ───────────── Історія ─────────────
-
-const historyPeriod = () => /** @type {HTMLSelectElement} */ (document.getElementById('history-period')).value;
-
-/** Історія з урахуванням вибраного періоду */
-async function visibleHistory() {
-  return filterByPeriod(await storage.getHistory(), historyPeriod());
-}
-
-async function refreshHistory() {
-  const entries = await visibleHistory();
-  ui.renderHistory(entries, {
-    filtered: historyPeriod() !== 'all',
-    onDelete: async (id) => {
-      await storage.deleteResult(id);
-      refreshHistory();
-    },
-  });
-  (await loadCharts())?.renderHistory(document.getElementById('history-chart'), entries);
-}
-
-async function openHistory() {
-  ui.openHistory();
-  await refreshHistory();
-}
-
-async function exportCSV() {
-  const entries = await visibleHistory();
-  if (!entries.length) return ui.toast(t('history.nothingToExport'));
-  const blob = new Blob(['\uFEFF' + StorageManager.toCSV(entries, t('csv.header').split('|'))], {
-    type: 'text/csv;charset=utf-8',
-  });
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
-    download: `speedtest-history-${new Date().toISOString().slice(0, 10)}.csv`,
-  });
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-
-// ───────────── Звук ─────────────
-// Синтезований через Web Audio API — без зовнішніх файлів (public/assets/sounds/ можна
-// використати для власних семплів).
-
-let audioCtx = null;
-function unlockAudio() {
-  if (!settings.sound || audioCtx) return;
-  try {
-    const Ctx = window.AudioContext || /** @type {any} */ (window).webkitAudioContext;
-    audioCtx = new Ctx();
-  } catch {
-    /* audio unsupported */
-  }
-}
-
-function playChime() {
-  if (!audioCtx) return;
-  const t = audioCtx.currentTime;
-  [659.25, 880, 1318.5].forEach((freq, i) => {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0, t + i * 0.09);
-    gain.gain.linearRampToValueAtTime(0.12, t + i * 0.09 + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.5);
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(t + i * 0.09);
-    osc.stop(t + i * 0.09 + 0.55);
-  });
-}
-
-// ───────────── Поділитися ─────────────
-
-/** Результат із посилання (#r=…) показується одразу при відкритті */
-function showSharedFromUrl() {
-  const shared = parseShareHash(location.hash);
-  if (shared === undefined) return;
-  if (shared === null) {
-    ui.toast(t('share.broken'), 'error');
-    return;
-  }
-  ui.showShared(shared);
-}
-
-function hideShared() {
-  ui.hideShared();
-  if (location.hash.startsWith('#r=')) history.replaceState(null, '', location.pathname + location.search);
-}
-
-/** Мінімальні дані для картки з повного результату */
-const toShared = (r) => ({
-  t: r.timestamp,
-  d: r.download.mbps,
-  u: r.upload.mbps,
-  p: r.ping.median,
-  j: r.ping.jitter,
-  l: r.ping.loss,
-  s: r.stability.score,
-  g: r.stability.grade,
-  n: r.server?.name,
-});
-
-async function makeImage() {
-  const { renderShareCard, canvasToPng } = await import('./ui/ShareCard.js');
-  return canvasToPng(await renderShareCard(toShared(lastResult)));
-}
-
-function bindShare() {
-  const shareBtn = document.getElementById('btn-share');
-  // Web Share API є переважно на мобільних — там це найзручніший варіант
-  shareBtn.hidden = !('share' in navigator);
-  shareBtn.addEventListener('click', async () => {
-    if (!lastResult) return;
-    const url = shareUrl(lastResult, location.href);
-    const text = t('share.text', {
-      down: formatMbps(lastResult.download.mbps),
-      up: formatMbps(lastResult.upload.mbps),
-      ping: formatMs(lastResult.ping.median),
-    });
-    try {
-      const file = new File([await makeImage()], 'speedtest.png', { type: 'image/png' });
-      const withFile = { title: t('brand.full'), text, url, files: [file] };
-      await navigator.share(navigator.canShare?.(withFile) ? withFile : { title: t('brand.full'), text, url });
-    } catch (e) {
-      if (e?.name !== 'AbortError') ui.toast(t('share.failed'), 'error');
-    }
-  });
-
-  document.getElementById('btn-copy-link').addEventListener('click', async () => {
-    if (!lastResult) return;
-    try {
-      await navigator.clipboard.writeText(shareUrl(lastResult, location.href));
-      ui.toast(t('share.copied'), 'success');
-    } catch {
-      ui.toast(t('share.copyFailed'), 'error');
-    }
-  });
-
-  document.getElementById('btn-save-image').addEventListener('click', async () => {
-    if (!lastResult) return;
-    const blob = await makeImage();
-    const a = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(blob),
-      download: `speedtest-${new Date(lastResult.timestamp).toISOString().slice(0, 16).replace(/[:T]/g, '-')}.png`,
-    });
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  });
-
-  document.getElementById('btn-shared-close').addEventListener('click', hideShared);
-  // Посилання вставили у вже відкриту вкладку — сторінка не перезавантажується, лише змінюється hash
-  window.addEventListener('hashchange', () => !running && showSharedFromUrl());
-}
-
-// ───────────── PWA ─────────────
-
-/** Service worker лише в продакшн-збірці: у dev він заважав би HMR */
-function registerServiceWorker() {
-  if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
-  let updateRequested = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    // Перезавантажуємо лише якщо користувач сам натиснув «Оновити» (і не посеред тесту)
-    if (updateRequested && !running) location.reload();
-  });
-  navigator.serviceWorker
-    .register(`${import.meta.env.BASE_URL}sw.js`)
-    .then((reg) => {
-      reg.addEventListener('updatefound', () => {
-        const next = reg.installing;
-        next?.addEventListener('statechange', () => {
-          if (next.state === 'installed' && navigator.serviceWorker.controller) {
-            ui.toast(t('toast.update'), 'info', 0, {
-              label: t('toast.updateAction'),
-              onClick: () => {
-                updateRequested = true;
-                next.postMessage({ type: 'SKIP_WAITING' });
-              },
-            });
-          }
-        });
-      });
-    })
-    .catch((e) => console.warn('Service worker не зареєстровано', e));
 }
 
 // ───────────── Мова ─────────────
@@ -537,7 +310,7 @@ function renderFooter() {
     textContent: 'Cloudflare',
   });
   const [before, after] = t('footer.text').split('{link}');
-  document.getElementById('footer-text').replaceChildren(before, link, after ?? '');
+  byId('footer-text').replaceChildren(before, link, after ?? '');
 }
 
 /** Застосовує мову до всього інтерфейсу, включно з уже показаними результатами */
@@ -556,10 +329,8 @@ function applyLanguage(lang) {
     ui.showDeltas(lastDeltas);
   }
   if (selected) detectServerLabel();
-  charts?.updateLanguage();
-  if (ui.el.modal.open) refreshHistory();
-  const clearBtn = document.getElementById('btn-clear');
-  if (!clearBtn.classList.contains('is-confirm')) clearBtn.textContent = t('history.clear');
+  charts.current?.updateLanguage();
+  historyPanel.relabel();
 }
 
 /** Оновлює підпис сервера без повторного пінгу */

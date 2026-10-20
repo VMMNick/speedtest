@@ -12,6 +12,7 @@ ARG BUILD_MODE=selfhosted
 COPY vite.config.js .env.selfhosted .env.cloud ./
 COPY config ./config
 COPY public ./public
+COPY shared ./shared
 COPY src ./src
 RUN npx vite build --mode "$BUILD_MODE"
 
@@ -30,6 +31,7 @@ ENV NODE_ENV=production \
 WORKDIR /app
 COPY --from=server-deps /app/server/node_modules ./server/node_modules
 COPY server/package.json ./server/
+COPY shared ./shared
 COPY server/src ./server/src
 COPY server/migrations ./server/migrations
 COPY --from=web /app/dist ./dist

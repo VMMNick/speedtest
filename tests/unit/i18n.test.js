@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { DICTIONARIES, t, setLang, getLang, getLocale, detectLang } from '../src/i18n/index.js';
+import { readFileSync, readdirSync } from 'node:fs';
+import { DICTIONARIES, t, setLang, getLang, getLocale, detectLang } from '../../src/i18n/index.js';
 
 const placeholders = (s) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
@@ -67,20 +67,21 @@ describe('detectLang', () => {
 
 describe('жорстко прописаний текст в інтерфейсі', () => {
   // Увесь видимий текст має йти через t(): кирилиця в рядкових літералах UI-коду — це пропущений переклад
+  // Усі модулі, що працюють з інтерфейсом: точки входу + ui/ + services/ (нові файли підхоплюються самі)
   const files = [
     'src/app.js',
     'src/analytics.js',
-    'src/ui/UIController.js',
-    'src/ui/ChartManager.js',
-    'src/ui/ShareCard.js',
-  ];
+    ...readdirSync('src/ui').map((f) => `src/ui/${f}`),
+    ...readdirSync('src/services').map((f) => `src/services/${f}`),
+  ].filter((f) => f.endsWith('.js'));
   for (const file of files) {
     it(file, () => {
       const code = readFileSync(file, 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '') // блокові коментарі
-        .replace(/(^|[^:])\/\/.*$/gm, '$1'); // рядкові коментарі
+        .replace(/(^|[^:])\/\/.*$/gm, '$1') // рядкові коментарі
+        .replace(/console\.\w+\([^\n]*/g, ''); // журнали для розробника не перекладаються
       const literals = [...code.matchAll(/(['"`])((?:\\.|(?!\1).)*?)\1/g)].map((m) => m[2]);
-      const offenders = literals.filter((s) => /[А-Яа-яІіЇїЄєҐґ]/.test(s) && !/^Не вдалося|^Service worker/.test(s));
+      const offenders = literals.filter((s) => /[А-Яа-яІіЇїЄєҐґ]/.test(s));
       expect(offenders).toEqual([]);
     });
   }
