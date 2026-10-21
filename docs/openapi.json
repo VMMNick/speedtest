@@ -1,0 +1,1248 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Спідтест API",
+    "version": "1.0.0",
+    "description": "API бекенда «Спідтесту»: ендпоінти вимірювань (сумісні зі speed.cloudflare.com), анонімні результати й агрегована аналітика. Групи з менш ніж 3 тестів не показуються (k-анонімність).",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "resultToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-result-token",
+        "description": "Одноразовий токен з GET /api/results/token. Діє не раніше ніж через 5 с і не пізніше ніж через 15 хв після видачі."
+      }
+    },
+    "schemas": {}
+  },
+  "paths": {
+    "/api/ping": {
+      "get": {
+        "operationId": "ping",
+        "summary": "Пінг",
+        "tags": [
+          "measurement"
+        ],
+        "description": "Порожня відповідь. Час обробки на сервері — у заголовку `Server-Timing: app;dur=…`, клієнт віднімає його з RTT.",
+        "responses": {
+          "200": {
+            "description": "Порожнє тіло",
+            "headers": {
+              "server-timing": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Порожнє тіло"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Параметри не відповідають схемі",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Параметри не відповідають схемі",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Перевищено ліміт запитів (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Перевищено ліміт запитів (rate limit)",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/meta": {
+      "get": {
+        "operationId": "getMeta",
+        "summary": "Дані клієнта",
+        "tags": [
+          "measurement"
+        ],
+        "description": "Формат як у speed.cloudflare.com/meta. Провайдер і місто тут не визначаються.",
+        "responses": {
+          "200": {
+            "description": "IP клієнта",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "IP клієнта",
+                  "type": "object",
+                  "properties": {
+                    "clientIp": {
+                      "type": "string"
+                    },
+                    "asOrganization": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "city": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "country": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "colo": {
+                      "type": "string",
+                      "description": "Для власного сервера завжди SELF"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Параметри не відповідають схемі",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Параметри не відповідають схемі",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Перевищено ліміт запитів (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Перевищено ліміт запитів (rate limit)",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/download": {
+      "get": {
+        "operationId": "download",
+        "summary": "Завантаження (download)",
+        "tags": [
+          "measurement"
+        ],
+        "description": "Потік нестискуваних випадкових байтів заданого обсягу.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000000,
+              "default": 0
+            },
+            "in": "query",
+            "name": "bytes",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Двійкові дані",
+            "content": {
+              "application/octet-stream": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Параметри не відповідають схемі",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Параметри не відповідають схемі",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Перевищено ліміт запитів (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Перевищено ліміт запитів (rate limit)",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upload": {
+      "post": {
+        "operationId": "upload",
+        "summary": "Вивантаження (upload)",
+        "tags": [
+          "measurement"
+        ],
+        "description": "Приймає тіло `text/plain` або `application/octet-stream` потоком, рахує байти й відкидає їх. Більше 100000000 байтів — 413.",
+        "responses": {
+          "200": {
+            "description": "Скільки байтів отримано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Скільки байтів отримано",
+                  "type": "object",
+                  "properties": {
+                    "bytes": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Параметри не відповідають схемі",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Параметри не відповідають схемі",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Тіло завелике",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Тіло завелике",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Перевищено ліміт запитів (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Перевищено ліміт запитів (rate limit)",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/token": {
+      "get": {
+        "operationId": "getResultToken",
+        "summary": "Одноразовий токен для результату",
+        "tags": [
+          "results"
+        ],
+        "description": "Браузер бере токен на старті тесту й надсилає його з результатом у заголовку `x-result-token`. Підпис HMAC-SHA256; повторне використання блокується через Redis.",
+        "responses": {
+          "200": {
+            "description": "Токен і вікно його дії",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Токен і вікно його дії",
+                  "type": "object",
+                  "required": [
+                    "token",
+                    "minAgeMs",
+                    "maxAgeMs"
+                  ],
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "minAgeMs": {
+                      "type": "integer",
+                      "description": "Раніше цього віку токен не приймається"
+                    },
+                    "maxAgeMs": {
+                      "type": "integer",
+                      "description": "Після цього віку токен прострочений"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Перевищено ліміт запитів (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Перевищено ліміт запитів (rate limit)",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results": {
+      "post": {
+        "operationId": "createResult",
+        "summary": "Зберегти анонімний результат",
+        "tags": [
+          "results"
+        ],
+        "description": "Тіло валідується спільною JSON Schema з `packages/shared` (зайві поля, напр. IP, — 400). Потрібен одноразовий токен.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "server",
+                  "download",
+                  "upload",
+                  "ping",
+                  "jitter",
+                  "loss",
+                  "grade",
+                  "score"
+                ],
+                "properties": {
+                  "server": {
+                    "type": "string",
+                    "enum": [
+                      "self",
+                      "cloudflare"
+                    ]
+                  },
+                  "download": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100000
+                  },
+                  "upload": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100000
+                  },
+                  "ping": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 60000
+                  },
+                  "jitter": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 60000
+                  },
+                  "loss": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "grade": {
+                    "type": "string",
+                    "enum": [
+                      "A",
+                      "B",
+                      "C",
+                      "D",
+                      "F"
+                    ]
+                  },
+                  "score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "bufferbloat": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 60000
+                  },
+                  "isp": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "country": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{2}$"
+                  },
+                  "lightMode": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "resultToken": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Збережено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Збережено",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Тіло не відповідає схемі",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Тіло не відповідає схемі",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токена немає, він підроблений, ще «молодий», прострочений або вже використаний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Токена немає, він підроблений, ще «молодий», прострочений або вже використаний",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Перевищено ліміт запитів (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Перевищено ліміт запитів (rate limit)",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/stats": {
+      "get": {
+        "operationId": "getResultStats",
+        "summary": "Зведення за період",
+        "tags": [
+          "results"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 30
+            },
+            "in": "query",
+            "name": "days",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Кількість тестів, середні швидкості й медіанний пінг",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Кількість тестів, середні швидкості й медіанний пінг",
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "avgDownload": {
+                      "type": "number",
+                      "description": "Мбіт/с"
+                    },
+                    "avgUpload": {
+                      "type": "number",
+                      "description": "Мбіт/с"
+                    },
+                    "medianPing": {
+                      "type": "number",
+                      "description": "мс"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Параметри не відповідають схемі",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Параметри не відповідають схемі",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/providers": {
+      "get": {
+        "operationId": "getProviders",
+        "summary": "Рейтинг провайдерів",
+        "tags": [
+          "analytics"
+        ],
+        "description": "Медіана й P90 download за провайдером, від найшвидшого. Лише групи з ≥ 3 тестів.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 30
+            },
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "description": "Період, днів"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "in": "query",
+            "name": "city",
+            "required": false,
+            "description": "Фільтр за містом"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Провайдери, відсортовані за медіаною download",
+            "headers": {
+              "x-cache": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                },
+                "description": "Чи відповідь узята з кешу Redis"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Провайдери, відсортовані за медіаною download",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "isp": {
+                        "type": "string"
+                      },
+                      "samples": {
+                        "type": "integer"
+                      },
+                      "medianDownload": {
+                        "type": "number",
+                        "description": "Мбіт/с"
+                      },
+                      "p90Download": {
+                        "type": "number",
+                        "description": "Мбіт/с"
+                      },
+                      "medianUpload": {
+                        "type": "number",
+                        "description": "Мбіт/с"
+                      },
+                      "medianPing": {
+                        "type": "number",
+                        "description": "мс"
+                      },
+                      "avgScore": {
+                        "type": "integer",
+                        "description": "Середня оцінка 0–100"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Параметри не відповідають схемі",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Параметри не відповідають схемі",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/cities": {
+      "get": {
+        "operationId": "getCities",
+        "summary": "Міста для фільтра",
+        "tags": [
+          "analytics"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 30
+            },
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "description": "Період, днів"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Міста з ≥ 3 тестів, від найпопулярнішого",
+            "headers": {
+              "x-cache": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                },
+                "description": "Чи відповідь узята з кешу Redis"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Міста з ≥ 3 тестів, від найпопулярнішого",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "city": {
+                        "type": "string"
+                      },
+                      "country": {
+                        "type": [
+                          "null",
+                          "string"
+                        ],
+                        "description": "ISO 3166-1 alpha-2"
+                      },
+                      "samples": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Параметри не відповідають схемі",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Параметри не відповідають схемі",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/heatmap": {
+      "get": {
+        "operationId": "getHeatmap",
+        "summary": "Теплова карта «день × година»",
+        "tags": [
+          "analytics"
+        ],
+        "description": "Медіана download за днем тижня (1 = пн) і годиною в часовому поясі користувача.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 30
+            },
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "description": "Період, днів"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "in": "query",
+            "name": "city",
+            "required": false,
+            "description": "Фільтр за містом"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "in": "query",
+            "name": "isp",
+            "required": false,
+            "description": "Фільтр за провайдером"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "default": "UTC"
+            },
+            "in": "query",
+            "name": "tz",
+            "required": false,
+            "description": "Часовий пояс IANA, напр. Europe/Kyiv (невідомий — 400)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Клітинки з даними (порожні не повертаються)",
+            "headers": {
+              "x-cache": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HIT",
+                    "MISS"
+                  ]
+                },
+                "description": "Чи відповідь узята з кешу Redis"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Клітинки з даними (порожні не повертаються)",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "dow": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 7
+                      },
+                      "hour": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 23
+                      },
+                      "samples": {
+                        "type": "integer"
+                      },
+                      "medianDownload": {
+                        "type": "number",
+                        "description": "Мбіт/с"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Параметри не відповідають схемі",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Параметри не відповідають схемі",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Стан сервера, бази й Redis",
+        "tags": [
+          "service"
+        ],
+        "description": "Використовується healthcheck-ом Docker і Render. Redis `disabled`, якщо REDIS_URL не задано.",
+        "responses": {
+          "200": {
+            "description": "Усе працює",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Усе працює",
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ]
+                    },
+                    "db": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "error",
+                        "disabled"
+                      ]
+                    },
+                    "redis": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "error",
+                        "disabled"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "База або Redis недоступні",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "База або Redis недоступні",
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ]
+                    },
+                    "db": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "error",
+                        "disabled"
+                      ]
+                    },
+                    "redis": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "error",
+                        "disabled"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Цей сервер"
+    }
+  ],
+  "security": [],
+  "tags": [
+    {
+      "name": "measurement",
+      "description": "Вимірювання до власного сервера (режим selfhosted)"
+    },
+    {
+      "name": "results",
+      "description": "Анонімні результати тестів"
+    },
+    {
+      "name": "analytics",
+      "description": "Агрегована аналітика (кеш у Redis на 60 с, заголовок X-Cache)"
+    },
+    {
+      "name": "service",
+      "description": "Службові ендпоінти"
+    }
+  ]
+}

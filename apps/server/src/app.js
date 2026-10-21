@@ -12,6 +12,7 @@ import analyticsRoutes from './routes/analytics.js';
 import { randomBytes } from 'node:crypto';
 import { memoryRepository } from './db.js';
 import { createTokenService } from './tokens.js';
+import { registerDocs, TAGS } from './openapi.js';
 
 /**
  * @param {object} opts
@@ -45,6 +46,9 @@ export async function buildApp({ config, repo = memoryRepository(), redis = unde
     skipOnError: true, // недоступний Redis не повинен ламати вимірювання
   });
 
+  // OpenAPI збирає маршрути через onRoute — тому реєструється раніше за них
+  await registerDocs(app);
+
   await app.register(speedRoutes, {
     maxTransferBytes: config.limits.maxTransferBytes,
     perMinute: config.limits.speedPerMinute,
@@ -66,7 +70,24 @@ export async function buildApp({ config, repo = memoryRepository(), redis = unde
   });
   await app.register(analyticsRoutes, { repo, redis });
 
-  app.get('/api/health', async (request, reply) => {
+  const component = { type: 'string', enum: ['ok', 'error', 'disabled'] };
+  const healthSchema = {
+    type: 'object',
+    properties: { status: { type: 'string', enum: ['ok', 'degraded'] }, db: component, redis: component },
+  };
+  const healthRoute = {
+    schema: {
+      tags: [TAGS.service],
+      operationId: 'getHealth',
+      summary: 'Стан сервера, бази й Redis',
+      description: 'Використовується healthcheck-ом Docker і Render. Redis `disabled`, якщо REDIS_URL не задано.',
+      response: {
+        200: { description: 'Усе працює', ...healthSchema },
+        503: { description: 'База або Redis недоступні', ...healthSchema },
+      },
+    },
+  };
+  app.get('/api/health', healthRoute, async (request, reply) => {
     const check = async (fn) => {
       try {
         await fn();

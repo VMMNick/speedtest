@@ -9,6 +9,7 @@
  * Приватність: групи з менш ніж MIN_SAMPLES тестів не показуються (k-анонімність).
  */
 import { cached, dataVersion } from '../cache.js';
+import { TAGS, badRequest } from '../openapi.js';
 
 export const MIN_SAMPLES = 3;
 const CACHE_TTL = 60;
@@ -24,9 +25,19 @@ export function isValidTimeZone(tz) {
 }
 
 const common = {
-  days: { type: 'integer', minimum: 1, maximum: 365, default: 30 },
-  city: { type: 'string', minLength: 1, maxLength: 100 },
+  days: { type: 'integer', minimum: 1, maximum: 365, default: 30, description: 'Період, днів' },
+  city: { type: 'string', minLength: 1, maxLength: 100, description: 'Фільтр за містом' },
 };
+
+const mbps = { type: 'number', description: 'Мбіт/с' };
+const cachedHeaders = {
+  'x-cache': { type: 'string', enum: ['HIT', 'MISS'], description: 'Чи відповідь узята з кешу Redis' },
+};
+/** Масив у відповіді; описує і поля, і заголовок кешу */
+const list = (description, properties) => ({
+  200: { description, headers: cachedHeaders, type: 'array', items: { type: 'object', properties } },
+  ...badRequest,
+});
 
 /** @type {import('fastify').FastifyPluginAsync<{ repo: any, redis?: import('ioredis').Redis }>} */
 export default async function analyticsRoutes(app, { repo, redis }) {
@@ -40,7 +51,24 @@ export default async function analyticsRoutes(app, { repo, redis }) {
 
   app.get(
     '/api/analytics/providers',
-    { schema: { querystring: { type: 'object', additionalProperties: false, properties: common } } },
+    {
+      schema: {
+        tags: [TAGS.analytics],
+        operationId: 'getProviders',
+        summary: 'Рейтинг провайдерів',
+        description: 'Медіана й P90 download за провайдером, від найшвидшого. Лише групи з ≥ 3 тестів.',
+        querystring: { type: 'object', additionalProperties: false, properties: common },
+        response: list('Провайдери, відсортовані за медіаною download', {
+          isp: { type: 'string' },
+          samples: { type: 'integer' },
+          medianDownload: mbps,
+          p90Download: mbps,
+          medianUpload: mbps,
+          medianPing: { type: 'number', description: 'мс' },
+          avgScore: { type: 'integer', description: 'Середня оцінка 0–100' },
+        }),
+      },
+    },
     async (request, reply) => {
       const { days, city = null } = /** @type {any} */ (request.query);
       return serve(reply, `providers:${days}:${city ?? ''}`, () =>
@@ -51,7 +79,19 @@ export default async function analyticsRoutes(app, { repo, redis }) {
 
   app.get(
     '/api/analytics/cities',
-    { schema: { querystring: { type: 'object', additionalProperties: false, properties: { days: common.days } } } },
+    {
+      schema: {
+        tags: [TAGS.analytics],
+        operationId: 'getCities',
+        summary: 'Міста для фільтра',
+        querystring: { type: 'object', additionalProperties: false, properties: { days: common.days } },
+        response: list('Міста з ≥ 3 тестів, від найпопулярнішого', {
+          city: { type: 'string' },
+          country: { type: ['string', 'null'], description: 'ISO 3166-1 alpha-2' },
+          samples: { type: 'integer' },
+        }),
+      },
+    },
     async (request, reply) => {
       const { days } = /** @type {any} */ (request.query);
       return serve(reply, `cities:${days}`, () => repo.cities({ days, minSamples: MIN_SAMPLES }));
@@ -62,14 +102,31 @@ export default async function analyticsRoutes(app, { repo, redis }) {
     '/api/analytics/heatmap',
     {
       schema: {
+        tags: [TAGS.analytics],
+        operationId: 'getHeatmap',
+        summary: 'Теплова карта «день × година»',
+        description: 'Медіана download за днем тижня (1 = пн) і годиною в часовому поясі користувача.',
         querystring: {
           type: 'object',
           additionalProperties: false,
           properties: {
             ...common,
-            isp: { type: 'string', minLength: 1, maxLength: 100 },
-            tz: { type: 'string', maxLength: 64, default: 'UTC' },
+            isp: { type: 'string', minLength: 1, maxLength: 100, description: 'Фільтр за провайдером' },
+            tz: {
+              type: 'string',
+              maxLength: 64,
+              default: 'UTC',
+              description: 'Часовий пояс IANA, напр. Europe/Kyiv (невідомий — 400)',
+            },
           },
+        },
+        response: {
+          ...list('Клітинки з даними (порожні не повертаються)', {
+            dow: { type: 'integer', minimum: 1, maximum: 7 },
+            hour: { type: 'integer', minimum: 0, maximum: 23 },
+            samples: { type: 'integer' },
+            medianDownload: mbps,
+          }),
         },
       },
     },

@@ -60,6 +60,7 @@
 
 - **`apps/web/src/core`** — чиста логіка вимірювань без DOM (працює у воркері, тестується в Node); **`apps/web/src/services`** — мережа, сховище, PWA; **`apps/web/src/ui`** — усе, що торкається DOM; **`packages/shared`** — JSON Schema результату, спільна для браузера й сервера (`apps/server`). Монорепозиторій на npm workspaces: один `npm install` ставить усе.
 - Межі шарів перевіряє ESLint, а контрактний тест проганяє тіло запиту з браузера через справжню валідацію сервера. [Архітектура →](docs/architecture.md)
+- API задокументоване в OpenAPI 3.1 зі схем валідації: [Swagger UI](https://speedtest-v003.onrender.com/api/docs) · [`docs/openapi.json`](docs/openapi.json).
 - Три режими збірки з одного коду: **GitHub Pages** (лише Cloudflare), **cloud** (Render: Cloudflare + статистика), **selfhosted** (власні ендпоінти вимірювань — для перевірки Wi-Fi у локальній мережі).
 
 ## Технології
@@ -67,7 +68,7 @@
 | Шар            | Стек                                                                                                        |
 | -------------- | ----------------------------------------------------------------------------------------------------------- |
 | Фронтенд       | Vanilla JS (ES-модулі, JSDoc + `checkJs`), Web Workers, Chart.js, Vite, власні плагіни CSP і service worker |
-| Бекенд         | Node.js 22, Fastify 5, PostgreSQL 18 (Neon), Redis, JSON Schema                                             |
+| Бекенд         | Node.js 22, Fastify 5, PostgreSQL 18 (Neon), Redis, JSON Schema, OpenAPI 3.1 / Swagger UI                   |
 | Якість         | Vitest, Playwright (E2E + axe), ESLint, Prettier, TypeScript-перевірка JS                                   |
 | Інфраструктура | Docker (multi-stage, non-root), GitHub Actions, GitHub Pages, Render, Dependabot                            |
 

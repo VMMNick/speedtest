@@ -62,6 +62,7 @@ Ping · jitter · loss · download · upload · bufferbloat · connection stabil
 
 - **`apps/web/src/core`** — pure measurement logic without the DOM (runs in the worker, tested in Node); **`apps/web/src/services`** — network, storage, PWA; **`apps/web/src/ui`** — everything that touches the DOM; **`packages/shared`** — the result's JSON Schema, shared by the browser and the server (`apps/server`). An npm workspaces monorepo: one `npm install` sets up everything.
 - ESLint enforces the layer boundaries, and a contract test runs the browser's request body through the server's real validation. [Architecture →](docs/architecture.md)
+- The API is documented as OpenAPI 3.1 generated from the validation schemas: [Swagger UI](https://speedtest-v003.onrender.com/api/docs) · [`docs/openapi.json`](docs/openapi.json).
 - Three build modes from one codebase: **GitHub Pages** (Cloudflare only), **cloud** (Render: Cloudflare + statistics), **selfhosted** (its own measurement endpoints — to check Wi-Fi on a local network).
 
 ## Tech stack
@@ -69,7 +70,7 @@ Ping · jitter · loss · download · upload · bufferbloat · connection stabil
 | Layer          | Stack                                                                                                          |
 | -------------- | -------------------------------------------------------------------------------------------------------------- |
 | Frontend       | Vanilla JS (ES modules, JSDoc + `checkJs`), Web Workers, Chart.js, Vite, custom CSP and service worker plugins |
-| Backend        | Node.js 22, Fastify 5, PostgreSQL 18 (Neon), Redis, JSON Schema                                                |
+| Backend        | Node.js 22, Fastify 5, PostgreSQL 18 (Neon), Redis, JSON Schema, OpenAPI 3.1 / Swagger UI                      |
 | Quality        | Vitest, Playwright (E2E + axe), ESLint, Prettier, TypeScript checking of JS                                    |
 | Infrastructure | Docker (multi-stage, non-root), GitHub Actions, GitHub Pages, Render, Dependabot                               |
 

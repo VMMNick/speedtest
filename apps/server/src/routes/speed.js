@@ -9,6 +9,7 @@
  */
 import { randomBytes } from 'node:crypto';
 import { Readable } from 'node:stream';
+import { TAGS, badRequest, errorSchema, rateLimited } from '../openapi.js';
 
 /** 1 МБ випадкових даних, генерується раз — далі віддаються зрізи (без навантаження на CPU) */
 const BLOCK = randomBytes(1 << 20);
@@ -50,7 +51,22 @@ export default async function speedRoutes(app, { maxTransferBytes, perMinute, tr
   // ServerSelector на фронтенді побачить сервер недоступним і обере Cloudflare.
   if (!transfers) return;
 
-  app.get('/api/ping', { config: { rateLimit } }, async (request, reply) => {
+  /** Схема для OpenAPI: тег, опис і 429 від rate limit */
+  const doc = (operationId, summary, description, response) => ({
+    tags: [TAGS.measure],
+    operationId,
+    summary,
+    description,
+    response: { ...response, ...badRequest, ...rateLimited },
+  });
+
+  const pingSchema = doc(
+    'ping',
+    'Пінг',
+    'Порожня відповідь. Час обробки на сервері — у заголовку `Server-Timing: app;dur=…`, клієнт віднімає його з RTT.',
+    { 200: { description: 'Порожнє тіло', headers: { 'server-timing': { type: 'string' } } } },
+  );
+  app.get('/api/ping', { config: { rateLimit }, schema: pingSchema }, async (request, reply) => {
     const ms = reply.elapsedTime;
     reply
       .header('cache-control', NO_STORE)
@@ -59,7 +75,25 @@ export default async function speedRoutes(app, { maxTransferBytes, perMinute, tr
       .send('');
   });
 
-  app.get('/api/meta', { config: { rateLimit } }, async (request, reply) => {
+  const metaSchema = doc(
+    'getMeta',
+    'Дані клієнта',
+    'Формат як у speed.cloudflare.com/meta. Провайдер і місто тут не визначаються.',
+    {
+      200: {
+        description: 'IP клієнта',
+        type: 'object',
+        properties: {
+          clientIp: { type: 'string' },
+          asOrganization: { type: ['string', 'null'] },
+          city: { type: ['string', 'null'] },
+          country: { type: ['string', 'null'] },
+          colo: { type: 'string', description: 'Для власного сервера завжди SELF' },
+        },
+      },
+    },
+  );
+  app.get('/api/meta', { config: { rateLimit }, schema: metaSchema }, async (request, reply) => {
     reply.header('cache-control', NO_STORE);
     // Формат як у speed.cloudflare.com/meta — фронтенду байдуже, хто відповідає
     return { clientIp: request.ip, asOrganization: null, city: null, country: null, colo: 'SELF' };
@@ -70,6 +104,9 @@ export default async function speedRoutes(app, { maxTransferBytes, perMinute, tr
     {
       config: { rateLimit },
       schema: {
+        ...doc('download', 'Завантаження (download)', 'Потік нестискуваних випадкових байтів заданого обсягу.', {
+          200: { description: 'Двійкові дані', content: { 'application/octet-stream': { schema: {} } } },
+        }),
         querystring: {
           type: 'object',
           properties: { bytes: { type: 'integer', minimum: 0, maximum: maxTransferBytes, default: 0 } },
@@ -86,7 +123,17 @@ export default async function speedRoutes(app, { maxTransferBytes, perMinute, tr
     },
   );
 
-  app.post('/api/upload', { config: { rateLimit } }, async (request, reply) => {
+  const uploadSchema = doc(
+    'upload',
+    'Вивантаження (upload)',
+    'Приймає тіло `text/plain` або `application/octet-stream` потоком, рахує байти й відкидає їх. ' +
+      `Більше ${maxTransferBytes} байтів — 413.`,
+    {
+      200: { description: 'Скільки байтів отримано', type: 'object', properties: { bytes: { type: 'integer' } } },
+      413: { description: 'Тіло завелике', ...errorSchema },
+    },
+  );
+  app.post('/api/upload', { config: { rateLimit }, schema: uploadSchema }, async (request, reply) => {
     const bytes = /** @type {{ bytes?: number }} */ (request.body)?.bytes ?? 0;
     reply.header('cache-control', NO_STORE);
     return { bytes };

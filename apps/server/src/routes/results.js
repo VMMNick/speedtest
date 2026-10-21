@@ -8,6 +8,7 @@
 
 import { bumpDataVersion } from '../cache.js';
 import { resultSchema, RESULT_TOKEN_HEADER } from '@speedtest/shared/result-schema';
+import { TAGS, badRequest, errorSchema, rateLimited } from '../openapi.js';
 
 // Схема спільна з фронтендом — див. packages/shared/result-schema.js
 export { resultSchema };
@@ -21,7 +22,31 @@ export { resultSchema };
 export default async function resultsRoutes(app, { repo, perMinute, tokensPerMinute, tokens, redis }) {
   app.get(
     '/api/results/token',
-    { config: { rateLimit: { max: tokensPerMinute, timeWindow: '1 minute' } } },
+    {
+      config: { rateLimit: { max: tokensPerMinute, timeWindow: '1 minute' } },
+      schema: {
+        tags: [TAGS.results],
+        operationId: 'getResultToken',
+        summary: 'Одноразовий токен для результату',
+        description:
+          'Браузер бере токен на старті тесту й надсилає його з результатом у заголовку `' +
+          RESULT_TOKEN_HEADER +
+          '`. Підпис HMAC-SHA256; повторне використання блокується через Redis.',
+        response: {
+          200: {
+            description: 'Токен і вікно його дії',
+            type: 'object',
+            required: ['token', 'minAgeMs', 'maxAgeMs'],
+            properties: {
+              token: { type: 'string' },
+              minAgeMs: { type: 'integer', description: 'Раніше цього віку токен не приймається' },
+              maxAgeMs: { type: 'integer', description: 'Після цього віку токен прострочений' },
+            },
+          },
+          ...rateLimited,
+        },
+      },
+    },
     async (request, reply) => {
       reply.header('cache-control', 'no-store');
       return { token: tokens.issue(), minAgeMs: tokens.minAgeMs, maxAgeMs: tokens.maxAgeMs };
@@ -33,12 +58,26 @@ export default async function resultsRoutes(app, { repo, perMinute, tokensPerMin
     {
       config: { rateLimit: { max: perMinute, timeWindow: '1 minute' } },
       schema: {
+        tags: [TAGS.results],
+        operationId: 'createResult',
+        summary: 'Зберегти анонімний результат',
+        description:
+          'Тіло валідується спільною JSON Schema з `packages/shared` (зайві поля, напр. IP, — 400). ' +
+          'Потрібен одноразовий токен.',
+        security: [{ resultToken: [] }],
         body: resultSchema,
         response: {
           201: {
+            description: 'Збережено',
             type: 'object',
-            properties: { id: { type: 'integer' }, createdAt: { type: 'string' } },
+            properties: { id: { type: 'integer' }, createdAt: { type: 'string', format: 'date-time' } },
           },
+          400: { description: 'Тіло не відповідає схемі', ...errorSchema },
+          403: {
+            description: 'Токена немає, він підроблений, ще «молодий», прострочений або вже використаний',
+            ...errorSchema,
+          },
+          ...rateLimited,
         },
       },
     },
@@ -55,9 +94,25 @@ export default async function resultsRoutes(app, { repo, perMinute, tokensPerMin
     '/api/results/stats',
     {
       schema: {
+        tags: [TAGS.results],
+        operationId: 'getResultStats',
+        summary: 'Зведення за період',
         querystring: {
           type: 'object',
           properties: { days: { type: 'integer', minimum: 1, maximum: 365, default: 30 } },
+        },
+        response: {
+          200: {
+            description: 'Кількість тестів, середні швидкості й медіанний пінг',
+            type: 'object',
+            properties: {
+              count: { type: 'integer' },
+              avgDownload: { type: 'number', description: 'Мбіт/с' },
+              avgUpload: { type: 'number', description: 'Мбіт/с' },
+              medianPing: { type: 'number', description: 'мс' },
+            },
+          },
+          ...badRequest,
         },
       },
     },

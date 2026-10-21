@@ -14,7 +14,7 @@ docker compose up -d --build   # http://localhost:8080
 | `db`    | `postgres:18-alpine`      | анонімні результати (volume `pgdata18`)                                |
 | `redis` | `redis:7-alpine`          | спільні лічильники rate limit для кількох інстансів                    |
 
-**API** (`apps/server/`):
+**API** (`apps/server/`). Інтерактивна документація — **Swagger UI на `/api/docs`** ([на Render](https://speedtest-v003.onrender.com/api/docs)), специфікація OpenAPI 3.1 — `/api/docs/json` і знімок у [`docs/openapi.json`](openapi.json). Обидві генеруються з тих самих JSON Schema, якими Fastify валідує запити, тож не розходяться з кодом; тест `openapi.test.js` падає, якщо знімок застарів (`npm run openapi -w @speedtest/server`).
 
 | Метод | Шлях                                          | Опис                                                                                                               |
 | ----- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
