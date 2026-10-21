@@ -142,6 +142,9 @@ export default {
   'error.unreachable': 'Server unreachable: no ping came back',
   'error.transfer': '{phase} failed: {detail}',
   'error.noData': 'no data',
+  'error.rateLimitHint':
+    'The server may have temporarily rate-limited requests after several tests in a row — try again in a minute.',
+  'toast.partial': 'Some requests failed ({count}) — the result may be slightly low. Run the test again in a minute.',
 
   'a11y.phase': '{phase}…',
   'a11y.pingResult': 'Ping {ping} ms, jitter {jitter} ms',

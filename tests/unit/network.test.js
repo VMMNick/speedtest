@@ -147,6 +147,25 @@ describe('NetworkEngine', () => {
     await expect(engine.measureDownload()).rejects.toThrow(/HTTP 429/);
   });
 
+  it('переживає тимчасові збої (напр. 429 без CORS): пауза, менший чанк, лічильник помилок', async () => {
+    const base = mockFetch();
+    let downloads = 0;
+    const fetchImpl = vi.fn(async (url, opts) => {
+      // Другий і третій download-запити «падають», як блокований CORS-ом 429
+      if (url.startsWith(server.downloadUrl) && [2, 3].includes(++downloads)) throw new TypeError('Failed to fetch');
+      return base(url, opts);
+    });
+    const engine = new NetworkEngine({
+      server,
+      config: { ...fastConfig, download: { ...fastConfig.download, durationMs: 1500, streams: 1 } },
+      fetchImpl,
+    });
+    const dl = await engine.measureDownload();
+    expect(dl.failedRequests).toBe(2);
+    expect(dl.bytes).toBeGreaterThan(0);
+    expect(downloads).toBeGreaterThan(3); // потік відновився після пауз, а не зупинився
+  });
+
   it('measureUpload використовує uploadImpl і рахує байти', async () => {
     const uploadImpl = vi.fn(async (url, body, onBytes) => {
       await sleep(5);

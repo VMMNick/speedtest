@@ -43,6 +43,7 @@
  * @property {number} mbpsAvg       середня після розгону
  * @property {number} mbpsP90       90-й перцентиль після розгону
  * @property {boolean} stoppedEarly фазу завершено раніше через стабільну швидкість
+ * @property {number} [failedRequests] запитів, що не вдалися (напр. сервер тимчасово обмежив швидкість запитів)
  * @property {number} bytes
  * @property {number} durationMs
  * @property {number[]} speeds

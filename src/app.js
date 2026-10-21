@@ -261,6 +261,8 @@ async function onDone(results) {
   ui.showPlan(results.download.mbps, settings.planMbps);
   finish();
   if (settings.sound) chime.play();
+  const failed = (results.download.failedRequests ?? 0) + (results.upload.failedRequests ?? 0);
+  if (failed > 0) ui.toast(t('toast.partial', { count: failed }), 'info', 7000);
   try {
     // Порівнюємо з попереднім тестом ДО збереження нового
     const [prev] = await storage.getHistory();
@@ -293,10 +295,11 @@ function finish() {
 function errorText(msg) {
   if (msg.code === 'UNREACHABLE') return t('error.unreachable');
   if (msg.code === 'TRANSFER_FAILED') {
-    return t('error.transfer', {
+    const text = t('error.transfer', {
       phase: phaseName(msg.details?.phase),
       detail: msg.details?.detail ?? t('error.noData'),
     });
+    return `${text}. ${t('error.rateLimitHint')}`;
   }
   return msg.message;
 }

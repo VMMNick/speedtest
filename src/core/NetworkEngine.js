@@ -10,6 +10,9 @@ import * as M from './MetricsCalculator.js';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const isAbort = (e) => e?.name === 'AbortError';
 
+/** Скільки помилок поспіль витримує один потік, перш ніж зупинитися */
+const MAX_STREAM_ERRORS = 5;
+
 /** Вивантаження через fetch. Content-Type text/plain → «простий» CORS-запит без preflight. */
 export async function fetchUpload(fetchImpl, url, body, onBytes, signal) {
   const res = await fetchImpl(url, {
@@ -290,6 +293,7 @@ export class NetworkEngine {
       }
     })();
 
+    let failed = 0;
     const stream = async () => {
       let size = settings.initialBytes;
       let errors = 0;
@@ -304,9 +308,13 @@ export class NetworkEngine {
         } catch (e) {
           if (isAbort(e)) break;
           lastError = e;
-          // Після 3 помилок поспіль потік зупиняється; інші потоки продовжують
-          if (++errors >= 3) break;
-          await sleep(100 * errors);
+          failed++;
+          // Збій часто означає тимчасове обмеження з боку сервера (Cloudflare відповідає 429 без
+          // CORS-заголовків — у браузері це «CORS error»). Тож: менший чанк, експоненційна пауза
+          // 250 мс → 4 с; після 5 помилок поспіль потік зупиняється, інші продовжують
+          size = Math.max(settings.initialBytes, Math.floor(size / 4));
+          if (++errors >= MAX_STREAM_ERRORS) break;
+          await sleep(Math.min(4000, 250 * 2 ** (errors - 1)));
           continue;
         } finally {
           inflight.delete(c);
@@ -358,6 +366,7 @@ export class NetworkEngine {
       mbpsAvg,
       mbpsP90,
       stoppedEarly,
+      failedRequests: failed,
       bytes: totalBytes,
       durationMs: samples[samples.length - 1].t,
       speeds,
