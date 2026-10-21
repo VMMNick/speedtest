@@ -52,5 +52,5 @@ databases:
     user: speedtest
     plan: free
     region: frankfurt
-    postgresMajorVersion: '17'
+    postgresMajorVersion: '18'
     ipAllowList: []

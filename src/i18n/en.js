@@ -152,6 +152,24 @@ export default {
   'a11y.done': 'Test complete. Stability grade {grade}, {score} out of 100',
 
   'nav.analytics': 'Analytics',
+  'nav.privacy': 'Privacy',
+  'privacy.pageTitle': 'Privacy — Speedcheck',
+  'privacy.title': 'Privacy',
+  'privacy.lead': 'Speedcheck uses no cookies, ads or trackers. Here is everything that happens to your data.',
+  'privacy.test.h': 'During a test',
+  'privacy.test.p':
+    'Your browser exchanges data with speed.cloudflare.com. Cloudflare sees your IP address, as any site you visit does; it also tells us your provider and city.',
+  'privacy.local.h': 'In your browser',
+  'privacy.local.p':
+    'Test history and settings (theme, language, plan) are stored only in your browser (IndexedDB and localStorage) and are never sent anywhere. Delete the history with “Clear history”.',
+  'privacy.stats.h': 'Anonymous statistics',
+  'privacy.stats.p1':
+    'Only in the version with a server, and only with your consent (the checkbox at the bottom of the main page), a test result is sent to the server: speeds, ping, jitter, loss, grade, provider, city, country and time.',
+  'privacy.stats.p2':
+    'Your IP address is not stored: the server uses it for one minute to limit request rates. Analytics only shows providers and cities with at least 3 tests. Because results are anonymous they cannot be linked to you — and so cannot be found and deleted individually.',
+  'privacy.share.h': '“Share” links',
+  'privacy.share.p':
+    'The result is encoded in the link itself and is not stored on a server. Your IP address and provider are not included.',
   'analytics.pageTitle': 'Analytics — Speedcheck',
   'analytics.title': 'Analytics',
   'analytics.back': 'Back to the test',

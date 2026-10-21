@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="uk" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Які дані збирає Спідтест і де вони зберігаються." />
+    <meta name="theme-color" content="#0b1020" />
+    <title>Конфіденційність — Спідтест</title>
+    <!-- Тема до першого відмальовування (як на головній) -->
+    <script>
+      (function () {
+        var mode = 'system';
+        try {
+          mode = (JSON.parse(localStorage.getItem('speedtest:settings')) || {}).theme || 'system';
+        } catch (e) {}
+        var dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0b1020' : '#f4f6fb');
+      })();
+    </script>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/assets/icons/speedometer.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles/variables.css" />
+    <link rel="stylesheet" href="./styles/main.css" />
+    <link rel="stylesheet" href="./styles/privacy.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main" data-i18n="nav.skip">Перейти до вмісту</a>
+
+    <header class="topbar">
+      <a class="brand" href="./" data-i18n-attr="title:analytics.back" title="До тесту">
+        <span class="icon icon--lg icon--speedometer" aria-hidden="true"></span>
+        <span class="brand__name"><span data-i18n="brand.a">Спід</span><span data-i18n="brand.b">тест</span></span>
+      </a>
+      <nav class="topbar__actions" aria-label="Дії" data-i18n-attr="aria-label:nav.actions">
+        <button
+          class="icon-btn lang-btn"
+          id="btn-lang"
+          type="button"
+          title="Мова: English"
+          data-i18n-attr="title:nav.lang"
+        >
+          <span aria-hidden="true" data-i18n="nav.langShort">EN</span>
+          <span class="sr-only" data-i18n="nav.lang">Мова: English</span>
+        </button>
+        <button class="icon-btn" id="btn-theme" type="button" title="Змінити тему" data-i18n-attr="title:nav.theme">
+          <span class="icon icon--theme" aria-hidden="true"></span>
+          <span class="sr-only" data-i18n="nav.theme">Змінити тему</span>
+        </button>
+      </nav>
+    </header>
+
+    <main id="main" class="privacy">
+      <h1 data-i18n="privacy.title">Конфіденційність</h1>
+      <p class="privacy__lead" data-i18n="privacy.lead">
+        Спідтест не використовує cookies, рекламу чи трекери. Ось усе, що відбувається з даними.
+      </p>
+
+      <section class="card">
+        <h2 data-i18n="privacy.test.h">Під час тесту</h2>
+        <p data-i18n="privacy.test.p">
+          Браузер обмінюється даними з speed.cloudflare.com. Cloudflare бачить вашу IP-адресу, як і будь-який сайт, до
+          якого ви звертаєтесь; від нього ж ми отримуємо назву провайдера й місто.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="privacy.local.h">У вашому браузері</h2>
+        <p data-i18n="privacy.local.p">
+          Історія тестів і налаштування (тема, мова, тариф) зберігаються лише у вашому браузері (IndexedDB і
+          localStorage) і нікуди не надсилаються. Видалити історію можна кнопкою «Очистити історію».
+        </p>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="privacy.stats.h">Анонімна статистика</h2>
+        <p data-i18n="privacy.stats.p1">
+          Лише у версії з сервером і лише за вашою згодою (галочка внизу головної сторінки) результат тесту надсилається
+          на сервер: швидкості, пінг, джиттер, втрати, оцінка, провайдер, місто, країна й час.
+        </p>
+        <p data-i18n="privacy.stats.p2">
+          IP-адреса не зберігається: сервер використовує її лише хвилину, щоб обмежити кількість запитів. Аналітика
+          показує тільки провайдерів і міста, де є щонайменше 3 тести. Оскільки результати анонімні, їх неможливо
+          пов’язати з вами — а отже, й знайти та видалити окремо.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="privacy.share.h">Посилання «Поділитися»</h2>
+        <p data-i18n="privacy.share.p">
+          Результат кодується в самому посиланні й не зберігається на сервері. IP-адреса та провайдер у посилання не
+          потрапляють.
+        </p>
+      </section>
+
+      <p><a href="./" data-i18n="analytics.back">До тесту</a></p>
+    </main>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+    <script type="module" src="./privacy.js"></script>
+  </body>
+</html>

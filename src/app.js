@@ -12,7 +12,7 @@ import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
 import { LIGHT_CONFIG, SERVERS, FEATURES, detectLightMode, mergeDeep, resolveServerUrls } from './core/config.js';
 import { compareResults } from './core/insights.js';
-import { t, setLang, getLang, detectLang, applyDom } from './i18n/index.js';
+import { t, setLang, loadLang, getLang, detectLang, applyDom } from './i18n/index.js';
 import { StorageManager } from './services/StorageManager.js';
 import { ServerSelector } from './services/ServerSelector.js';
 import { toPayload, submitResult } from './services/ResultsApi.js';
@@ -69,7 +69,7 @@ const lightMode = () => detectLightMode(connection);
 const showModeNote = () => (byId('mode-note').hidden = !lightMode());
 
 async function init() {
-  applyLanguage(settings.lang ?? detectLang(navigator.languages));
+  applyLanguage(await loadLang(settings.lang ?? detectLang(navigator.languages)));
   ui.setSound(settings.sound);
   showModeNote();
   connection?.addEventListener?.('change', showModeNote);
@@ -99,10 +99,10 @@ function bindEvents() {
   ui.el.start.addEventListener('click', startTest);
   ui.el.stop.addEventListener('click', stopTest);
   byId('btn-theme').addEventListener('click', () => theme.toggle());
-  byId('btn-lang').addEventListener('click', () => {
+  byId('btn-lang').addEventListener('click', async () => {
     const next = getLang() === 'uk' ? 'en' : 'uk';
     settings = storage.saveSettings({ lang: next });
-    applyLanguage(next);
+    applyLanguage(await loadLang(next));
   });
   byId('btn-sound').addEventListener('click', () => {
     settings = storage.saveSettings({ sound: !settings.sound });

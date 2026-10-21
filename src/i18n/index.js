@@ -9,9 +9,14 @@
  * Відсутній ключ → українська → сам ключ (видно в UI, тест це ловить).
  */
 import uk from './uk.js';
-import en from './en.js';
 
-export const DICTIONARIES = { uk, en };
+/**
+ * Українська — основна й запасна, тож вбудована в стартовий бандл.
+ * Інші мови — окремими чанками, вантажаться через loadLang() лише коли потрібні.
+ * @type {Record<string, Record<string, string>>}
+ */
+export const DICTIONARIES = { uk };
+const LOADERS = { en: () => import('./en.js') };
 export const LANGS = /** @type {const} */ (['uk', 'en']);
 const LOCALES = { uk: 'uk-UA', en: 'en-GB' };
 
@@ -28,6 +33,15 @@ export function detectLang(languages) {
 export const getLang = () => current;
 /** Локаль для toLocaleString (дати) */
 export const getLocale = () => LOCALES[current];
+
+/**
+ * Довантажує словник мови (якщо він ще не завантажений). Після цього setLang(lang) його застосує.
+ * @param {string} lang
+ */
+export async function loadLang(lang) {
+  if (!DICTIONARIES[lang] && LOADERS[lang]) DICTIONARIES[lang] = (await LOADERS[lang]()).default;
+  return lang;
+}
 
 /** @param {string} lang */
 export function setLang(lang) {

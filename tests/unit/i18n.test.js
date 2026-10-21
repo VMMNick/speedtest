@@ -1,6 +1,9 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
-import { DICTIONARIES, t, setLang, getLang, getLocale, detectLang } from '../../src/i18n/index.js';
+import { DICTIONARIES, t, setLang, loadLang, getLang, getLocale, detectLang } from '../../src/i18n/index.js';
+
+// Англійська вантажиться окремим чанком — у тестах довантажуємо її заздалегідь
+await loadLang('en');
 
 const placeholders = (s) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 

@@ -8,7 +8,7 @@ import '@fontsource-variable/jetbrains-mono';
 import { ThemeManager } from './ui/ThemeManager.js';
 import { StorageManager } from './services/StorageManager.js';
 import { formatMbps, formatMs } from './ui/format.js';
-import { t, setLang, getLang, detectLang, applyDom, getLocale } from './i18n/index.js';
+import { t, setLang, loadLang, getLang, detectLang, applyDom, getLocale } from './i18n/index.js';
 import { heatBins, binOf, bestAndWorst } from './core/heatmap.js';
 import { DEMO_THRESHOLD, demoStats, demoProviders, demoCities, demoHeatmap } from './core/demoData.js';
 
@@ -325,13 +325,13 @@ function toast(message) {
   setTimeout(() => el.remove(), 6000);
 }
 
-function init() {
-  applyLanguage(settings.lang ?? detectLang(navigator.languages));
+async function init() {
+  applyLanguage(await loadLang(settings.lang ?? detectLang(navigator.languages)));
   $('#btn-theme').addEventListener('click', () => theme.toggle());
-  $('#btn-lang').addEventListener('click', () => {
+  $('#btn-lang').addEventListener('click', async () => {
     const next = getLang() === 'uk' ? 'en' : 'uk';
     settings = storage.saveSettings({ lang: next });
-    applyLanguage(next);
+    applyLanguage(await loadLang(next));
   });
   $('#demo-toggle').addEventListener('click', () => {
     demo.choice = isDemo() ? 'real' : 'demo';

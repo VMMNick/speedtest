@@ -11,7 +11,7 @@ docker compose up -d --build   # http://localhost:8080
 | Сервіс  | Образ                     | Роль                                                                   |
 | ------- | ------------------------- | ---------------------------------------------------------------------- |
 | `app`   | збирається з `Dockerfile` | фронтенд (збірка `selfhosted`) + API на Fastify, non-root, healthcheck |
-| `db`    | `postgres:17-alpine`      | анонімні результати (volume `pgdata`)                                  |
+| `db`    | `postgres:18-alpine`      | анонімні результати (volume `pgdata18`)                                |
 | `redis` | `redis:7-alpine`          | спільні лічильники rate limit для кількох інстансів                    |
 
 **API** (`server/`):
@@ -50,7 +50,9 @@ docker compose up -d --build   # http://localhost:8080
 - **Хмарна збірка** (`BUILD_MODE=cloud`, `.env.cloud`): вимірювання йдуть через Cloudflare, а сервер **не роздає** download/upload (`SPEED_ENDPOINTS=false`) — інакше кожен тест з'їдав би сотні МБ безкоштовного трафіку. Сервер зберігає статистику й показує аналітику.
 - **Безкоштовні тарифи:** сервіс засинає після 15 хв простою (перше відкриття ~1 хв), безкоштовна PostgreSQL живе 30 днів, Key Value не зберігається на диск. Для постійної роботи — платні плани в `render.yaml`.
 - **Якщо сервіс створено вручну** (не з `render.yaml`): сервер сам бачить `RENDER=true` і за замовчуванням довіряє проксі (`TRUST_PROXY`) та вимикає ендпоінти вимірювань (`SPEED_ENDPOINTS`) — фронтенд тоді автоматично міряє через Cloudflare. Без `REDIS_URL` rate limit і кеш працюють у пам'яті процесу.
+- **PostgreSQL 18** — та сама версія в Neon, CI, `docker-compose` і `render.yaml`. Старий локальний том `pgdata` (PostgreSQL 17) новий образ не читає: дані з нього переносяться через `pg_dump`/`pg_restore`, або том просто видаляється (`docker volume rm speedtest_pgdata`).
 - **Постійна база — Neon** (безкоштовна PostgreSQL без терміну дії): у веб-сервісі достатньо замінити `DATABASE_URL` на рядок підключення Neon (`…-pooler…/neondb?sslmode=verify-full`); таблиці створяться міграціями при старті.
+- **Redis на Upstash** (безкоштовний тариф із місячним лімітом команд): без нього rate limit і кеш аналітики живуть у пам'яті процесу Render і скидаються після кожного «засинання». Створіть базу в регіоні Frankfurt (поруч із сервісом), скопіюйте рядок підключення `rediss://…` (TLS) і задайте його як `REDIS_URL` у Render → Environment. `ioredis` вмикає TLS за схемою `rediss://` сам; перевірка — `/api/health` має показати `"redis":"ok"`.
 - **Щоденний бекап** (`.github/workflows/backup.yml`): `pg_dump` (клієнт PostgreSQL 18 — не старший за сервер) у форматі custom зберігається як артефакт Actions на 30 днів; запуск і вручну (Actions → DB backup → Run workflow). Потрібен секрет `DATABASE_BACKUP_URL` — **прямий** рядок Neon (без `-pooler`). Відновлення: `pg_restore --no-owner --clean --if-exists -d "$DATABASE_URL" speedtest-….dump`.
 - Хмарна збірка перевіряється в CI окремим E2E (`npm run test:e2e:cloud`) і збіркою Docker-образу з `BUILD_MODE=cloud`.
 

@@ -1,7 +1,7 @@
 # Локальний запуск усього стеку:
 #   docker compose up -d --build     → http://localhost:8080
 #   docker compose logs -f app
-#   docker compose down               (дані БД лишаються у volume pgdata)
+#   docker compose down               (дані БД лишаються у volume pgdata18)
 name: speedtest
 
 services:
@@ -24,13 +24,14 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: speedtest
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-speedtest}
       POSTGRES_DB: speedtest
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # PostgreSQL 18+: том монтується в /var/lib/postgresql (дані — у підкаталозі версії)
+      - pgdata18:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U speedtest -d speedtest']
       interval: 5s
@@ -50,4 +51,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  pgdata:
+  pgdata18:

@@ -1,0 +1,29 @@
+/* Сторінка «Конфіденційність»: вузька колонка тексту */
+.privacy {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px var(--space) 48px;
+  display: grid;
+  gap: 16px;
+}
+.privacy h1 {
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+.privacy__lead {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.privacy .card {
+  padding: 18px 20px;
+}
+.privacy h2 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+.privacy p {
+  margin: 0 0 8px;
+}
+.privacy p:last-child {
+  margin-bottom: 0;
+}

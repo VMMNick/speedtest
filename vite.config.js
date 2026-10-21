@@ -22,8 +22,21 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       input:
         loadEnv(mode, r('.'), 'VITE_').VITE_RESULTS_API === 'true'
-          ? { main: r('./src/index.html'), analytics: r('./src/analytics.html') }
-          : { main: r('./src/index.html') },
+          ? { main: r('./src/index.html'), analytics: r('./src/analytics.html'), privacy: r('./src/privacy.html') }
+          : { main: r('./src/index.html'), privacy: r('./src/privacy.html') },
+      output: {
+        // Модулі, спільні для кількох сторінок, — одним чанком, а не п'ятьма дрібними:
+        // кожен окремий файл стискається гірше і додає запит
+        manualChunks(id) {
+          if (
+            /\/src\/(i18n\/(index|uk)|core\/(config|gauge)|ui\/(dom|format|ThemeManager)|services\/StorageManager)\.js$/.test(
+              id,
+            )
+          ) {
+            return 'shared';
+          }
+        },
+      },
     },
     assetsInlineLimit: (file) => (/\.woff2?$/.test(file) ? false : undefined),
   },
