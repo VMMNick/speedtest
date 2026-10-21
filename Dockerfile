@@ -8,13 +8,17 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
 # selfhosted — власні ендпоінти вимірювань (LAN/VPS); cloud — вимірювання через Cloudflare (Render)
-ARG BUILD_MODE=selfhosted
+# Без явного BUILD_MODE: cloud, якщо в збірку прийшов RENDER=true, інакше selfhosted.
+# Render передає змінні сервісу як build args, тож надійніше задати там BUILD_MODE=cloud явно.
+ARG BUILD_MODE=
+ARG RENDER=
 COPY vite.config.js .env.selfhosted .env.cloud ./
 COPY config ./config
 COPY public ./public
 COPY shared ./shared
 COPY src ./src
-RUN npx vite build --mode "$BUILD_MODE"
+RUN mode="${BUILD_MODE:-$([ "$RENDER" = true ] && echo cloud || echo selfhosted)}" \
+ && echo "vite build --mode $mode" && npx vite build --mode "$mode"
 
 # ── 2. Продакшн-залежності сервера ─────────────────────────────────
 FROM node:22-alpine AS server-deps
