@@ -471,4 +471,18 @@ describe('ServerSelector', () => {
     expect(coloCode({})).toBeNull();
     expect(coloCode(null)).toBeNull();
   });
+
+  it('сервер, що відповідає 404 на пінг, вважається недоступним (не обирається)', async () => {
+    const self = { ...server, id: 'self', pingUrl: 'https://self.test/api/ping' };
+    let t = 0;
+    const fetchImpl = async (url) => {
+      t += String(url).includes('self.test') ? 1 : 30; // «власний» відповідає швидше
+      return String(url).includes('self.test') ? new Response('', { status: 404 }) : new Response('');
+    };
+    const sel = new ServerSelector({ servers: [self, server], fetchImpl, now: () => t });
+    expect(await sel.probe(self)).toBe(Infinity);
+    const best = await sel.selectBest();
+    expect(best.server.id).toBe(server.id);
+    expect(best.reachable).toBe(true);
+  });
 });

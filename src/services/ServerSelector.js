@@ -28,6 +28,8 @@ export class ServerSelector {
       try {
         const res = await this.fetch(server.pingUrl, { cache: 'no-store', signal: c.signal });
         await res.arrayBuffer();
+        // 404/5xx — сервер відповів, але вимірювань не підтримує (напр. SPEED_ENDPOINTS=false на Render)
+        if (!res.ok) break;
         if (i > 0 || attempts === 1) rtts.push(this.now() - t0); // перший — прогрів з'єднання
       } catch {
         /* недоступний */
