@@ -86,3 +86,5 @@ npm run media   # → docs/media/*.png, demo.gif
 ```
 
 `scripts/capture-media.js` збирає self-hosted фронтенд, піднімає Fastify з вигаданими даними в пам'яті та локальний HTTPS/HTTP2-сервер замість Cloudflare (Chromium резолвить `speed.cloudflare.com` на `127.0.0.1` через `--host-resolver-rules`). Швидкість «мережі» обмежена на сервері (~350/95 Мбіт/с), тож графіки, пінг під навантаженням і оцінки виглядають як у реальному тесті. Потрібні `ffmpeg` і `openssl`; GIF — двопрохідна палітра, 12 к/с, 900 px.
+
+Схема архітектури в README — не Mermaid (GitHub розкладає її з перехрещеннями), а SVG у двох темах: `node scripts/architecture-svg.js` → `docs/media/architecture-{light,dark}.svg`; README підставляє потрібну через `<picture>`.

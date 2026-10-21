@@ -40,7 +40,7 @@
 
 ## Можливості
 
-|                   |                                                                                                                                    |
+| Що                | Деталі                                                                                                                             |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | **Вимірювання**   | пінг, джиттер (RFC 3550), втрати, download/upload у паралельних потоках з адаптивним чанком, bufferbloat (A–F), стабільність 0–100 |
 | **Інтерпретація** | придатність для ігор, відеодзвінків і 4K; % від тарифу провайдера; порівняння з попереднім тестом ↑/↓                              |
@@ -51,27 +51,10 @@
 
 ## Як це влаштовано
 
-```mermaid
-flowchart LR
-  subgraph Browser["Браузер"]
-    UI["UI · app.js<br/>датчик, графіки, історія"]
-    W["Web Worker<br/>NetworkEngine"]
-    DB[("IndexedDB<br/>історія")]
-    UI <-- postMessage --> W
-    UI --- DB
-  end
-  CF["Cloudflare<br/>speed.cloudflare.com"]
-  subgraph Server["Fastify (Docker на Render)"]
-    API["/api/results<br/>/api/analytics"]
-  end
-  PG[("PostgreSQL<br/>Neon")]
-  R[("Redis<br/>кеш і rate limit")]
-  W -- "ping · __down · __up" --> CF
-  UI -- "анонімний результат (за згодою)" --> API
-  API --> PG
-  API --> R
-  GH["GitHub Actions"] -. "щоденний pg_dump" .-> PG
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/architecture-dark.svg">
+  <img src="docs/media/architecture-light.svg" alt="Архітектура: браузер (інтерфейс і Web Worker) міряє через Cloudflare, анонімний результат іде на Fastify, дані — у PostgreSQL і Redis, щоночі бекап через GitHub Actions" width="760">
+</picture>
 
 - **`src/core`** — чиста логіка вимірювань без DOM (працює у воркері, тестується в Node); **`src/services`** — мережа, сховище, PWA; **`src/ui`** — усе, що торкається DOM; **`shared/`** — JSON Schema результату, спільна для браузера й сервера.
 - Межі шарів перевіряє ESLint, а контрактний тест проганяє тіло запиту з браузера через справжню валідацію сервера. [Архітектура →](docs/architecture.md)
