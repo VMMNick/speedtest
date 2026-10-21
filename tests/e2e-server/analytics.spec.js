@@ -14,8 +14,12 @@ test.beforeAll(async ({ request }) => {
     ...[30, 40, 50].map((download) => ({ ...base, isp: SLOW, city: CITY, download, ping: 35 })),
     ...[999, 999].map((download) => ({ ...base, isp: TINY, city: CITY, download, ping: 3 })), // < 3 тестів — прихований
   ];
-  for (const data of rows) {
-    const res = await request.post('api/results', { data });
+  // Як браузер: токен на «старті», результат — не раніше мінімального віку токена (1 с у тестовому сервері)
+  const tokens = [];
+  for (let i = 0; i < rows.length; i++) tokens.push((await (await request.get('api/results/token')).json()).token);
+  await new Promise((r) => setTimeout(r, 1100));
+  for (const [i, data] of rows.entries()) {
+    const res = await request.post('api/results', { data, headers: { 'x-result-token': tokens[i] } });
     expect(res.status()).toBe(201);
   }
 });

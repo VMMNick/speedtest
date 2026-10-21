@@ -15,7 +15,7 @@ import { compareResults } from './core/insights.js';
 import { t, setLang, loadLang, getLang, detectLang, applyDom } from './i18n/index.js';
 import { StorageManager } from './services/StorageManager.js';
 import { ServerSelector } from './services/ServerSelector.js';
-import { toPayload, submitResult } from './services/ResultsApi.js';
+import { toPayload, submitResult, requestToken } from './services/ResultsApi.js';
 import { createChime } from './services/sound.js';
 import { registerServiceWorker } from './services/pwa.js';
 import { UIController } from './ui/UIController.js';
@@ -52,6 +52,8 @@ let lastResult = null;
 /** Порівняння з попереднім — для повторного показу після зміни мови */
 let lastDeltas = null;
 let hasRun = false;
+/** Токен для анонімної статистики, взятий на старті тесту (Promise<string | null> | null) */
+let resultToken = null;
 
 const chime = createChime();
 const historyPanel = new HistoryPanel({ ui, storage, loadCharts });
@@ -167,6 +169,8 @@ async function startTest() {
     return;
   }
   running = true;
+  // Токен береться на старті: сервер прийме результат, лише якщо тест справді тривав
+  resultToken = FEATURES.resultsApi && settings.shareStats !== false ? requestToken(document.baseURI) : null;
   pingLive = [];
   sharePanel.hideShared();
   ui.setRunning(true);
@@ -273,7 +277,8 @@ async function onDone(results) {
     await storage.addResult(results);
     // Анонімна статистика на власному сервері (лише у self-hosted збірці і за згодою)
     if (FEATURES.resultsApi && settings.shareStats !== false) {
-      submitResult(toPayload(results, serverMeta, { lightMode: lightMode() }), document.baseURI);
+      const token = await resultToken;
+      if (token) submitResult(toPayload(results, serverMeta, { lightMode: lightMode() }), document.baseURI, token);
     }
   } catch (e) {
     console.warn('Не вдалося зберегти результат', e);

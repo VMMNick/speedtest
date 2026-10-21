@@ -9,7 +9,9 @@ import fastifyStatic from '@fastify/static';
 import speedRoutes from './routes/speed.js';
 import resultsRoutes from './routes/results.js';
 import analyticsRoutes from './routes/analytics.js';
+import { randomBytes } from 'node:crypto';
 import { memoryRepository } from './db.js';
+import { createTokenService } from './tokens.js';
 
 /**
  * @param {object} opts
@@ -48,7 +50,20 @@ export async function buildApp({ config, repo = memoryRepository(), redis = unde
     perMinute: config.limits.speedPerMinute,
     transfers: config.speedEndpoints,
   });
-  await app.register(resultsRoutes, { repo, redis, perMinute: config.limits.resultsPerMinute });
+  const { secret, minAgeMs, maxAgeMs, perMinute: tokensPerMinute } = config.resultTokens;
+  const tokens = createTokenService({
+    secret: secret ?? randomBytes(32).toString('hex'),
+    minAgeMs,
+    maxAgeMs,
+    redis,
+  });
+  await app.register(resultsRoutes, {
+    repo,
+    redis,
+    tokens,
+    perMinute: config.limits.resultsPerMinute,
+    tokensPerMinute,
+  });
   await app.register(analyticsRoutes, { repo, redis });
 
   app.get('/api/health', async (request, reply) => {

@@ -17,6 +17,9 @@ export const RESULT_LIMITS = Object.freeze({
   bufferbloat: 60_000,
 });
 
+/** Заголовок з одноразовим токеном, отриманим з GET /api/results/token на старті тесту */
+export const RESULT_TOKEN_HEADER = 'x-result-token';
+
 /** Максимальна довжина текстових полів */
 export const TEXT_MAX = 100;
 

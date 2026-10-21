@@ -23,5 +23,14 @@ test('хмарна збірка: міряє через Cloudflare, статис�
   expect(res.status()).toBe(201);
   expect(JSON.parse(res.request().postData())).toMatchObject({ server: 'cloudflare', isp: 'Test ISP', country: 'UA' });
 
+  expect(res.request().headers()['x-result-token']).toMatch(/^\d+\./); // токен узято на старті тесту
+
+  expect((await (await request.get('api/results/stats')).json()).count).toBe(before + 1);
+
+  // Результат «у обхід» тесту — без токена — сервер не приймає
+  const forged = await request.post('api/results', {
+    data: { server: 'cloudflare', download: 9999, upload: 9999, ping: 1, jitter: 0, loss: 0, grade: 'A', score: 100 },
+  });
+  expect(forged.status()).toBe(403);
   expect((await (await request.get('api/results/stats')).json()).count).toBe(before + 1);
 });

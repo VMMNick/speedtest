@@ -8,6 +8,7 @@ import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { toPayload } from '../../src/services/ResultsApi.js';
 import { RESULT_LIMITS } from '../../shared/result-schema.js';
+import { TEST_ENV, postResult } from './fixtures.js';
 
 const result = (over = {}) => ({
   timestamp: Date.now(),
@@ -23,11 +24,11 @@ const result = (over = {}) => ({
 describe('контракт POST /api/results', () => {
   let app;
   beforeAll(async () => {
-    app = await buildApp({ config: loadConfig({ RATE_RESULTS_PER_MIN: '1000' }), logger: false });
+    app = await buildApp({ config: loadConfig({ ...TEST_ENV, RATE_RESULTS_PER_MIN: '1000' }), logger: false });
   });
   afterAll(() => app.close());
 
-  const post = (payload) => app.inject({ method: 'POST', url: '/api/results', payload });
+  const post = (payload) => postResult(app, payload);
 
   it('звичайний результат приймається', async () => {
     const res = await post(toPayload(result(), { isp: 'Kyivstar', city: 'Kyiv', country: 'UA' }));

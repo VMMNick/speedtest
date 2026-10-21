@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { toPayload, submitResult } from '../../src/services/ResultsApi.js';
+import { toPayload, submitResult, requestToken } from '../../src/services/ResultsApi.js';
 import { SELF_SERVER, resolveServerUrls } from '../../src/core/config.js';
 import { resultSchema } from '../../shared/result-schema.js';
 
@@ -49,21 +49,38 @@ describe('toPayload — тіло для POST /api/results', () => {
 });
 
 describe('submitResult', () => {
-  it('POST JSON на api/results відносно сторінки', async () => {
+  it('POST JSON на api/results відносно сторінки, з токеном у заголовку', async () => {
     const fetchImpl = vi.fn(async () => new Response('{}', { status: 201 }));
-    expect(await submitResult({ a: 1 }, 'https://host/speedtest/', fetchImpl)).toBe(true);
+    expect(await submitResult({ a: 1 }, 'https://host/speedtest/', 'tok', fetchImpl)).toBe(true);
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe('https://host/speedtest/api/results');
     expect(init.method).toBe('POST');
+    expect(init.headers['x-result-token']).toBe('tok');
     expect(JSON.parse(init.body)).toEqual({ a: 1 });
   });
   it('помилка мережі чи 4xx — false, без винятку', async () => {
-    expect(await submitResult({}, 'https://h/', async () => new Response('', { status: 429 }))).toBe(false);
+    expect(await submitResult({}, 'https://h/', 't', async () => new Response('', { status: 403 }))).toBe(false);
     expect(
-      await submitResult({}, 'https://h/', async () => {
+      await submitResult({}, 'https://h/', 't', async () => {
         throw new TypeError('offline');
       }),
     ).toBe(false);
+  });
+});
+
+describe('requestToken', () => {
+  it('бере токен з api/results/token', async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ token: 'abc' }));
+    expect(await requestToken('https://host/speedtest/', fetchImpl)).toBe('abc');
+    expect(fetchImpl.mock.calls[0][0]).toBe('https://host/speedtest/api/results/token');
+  });
+  it('сервер недоступний або відповів помилкою — null', async () => {
+    expect(await requestToken('https://h/', async () => new Response('', { status: 429 }))).toBeNull();
+    expect(
+      await requestToken('https://h/', async () => {
+        throw new TypeError('offline');
+      }),
+    ).toBeNull();
   });
 });
 

@@ -28,6 +28,8 @@ export default defineConfig({
       PORT: String(PORT),
       STATIC_DIR: 'dist',
       LOG_LEVEL: 'warn',
+      // Тест у браузері з короткими фазами триває ~3 с — мінімальний вік токена 1 с (у продакшні 5 с)
+      RESULTS_TOKEN_MIN_AGE_MS: '1000',
       SPEED_ENDPOINTS: 'false',
       TRUST_PROXY: 'true',
       ...(process.env.DATABASE_URL ? { DATABASE_URL: process.env.DATABASE_URL } : {}),

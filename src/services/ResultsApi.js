@@ -4,7 +4,7 @@
  * IP-адреса не надсилається; провайдер/місто/країна — лише якщо їх повернув /meta.
  */
 
-import { RESULT_LIMITS, TEXT_MAX, COUNTRY_RE } from '../../shared/result-schema.js';
+import { RESULT_LIMITS, TEXT_MAX, COUNTRY_RE, RESULT_TOKEN_HEADER } from '../../shared/result-schema.js';
 
 /** Округлення до сотих і обмеження межами схеми — сервер не відхилить запит через викид */
 const fit = (x, max) => Math.min(max, Math.max(0, Math.round((Number(x) || 0) * 100) / 100));
@@ -41,16 +41,38 @@ export function toPayload(r, meta, { lightMode = false } = {}) {
 }
 
 /**
+ * Одноразовий токен результату — береться на старті тесту, повертається разом із результатом.
+ * Сервер приймає результат лише з токеном, виданим щонайменше кілька секунд тому (див. server/src/tokens.js).
+ * @param {string} base document.baseURI
+ * @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<string | null>} null — сервер недоступний (тоді результат просто не надсилається)
+ */
+export async function requestToken(base, fetchImpl = fetch) {
+  try {
+    const res = await fetchImpl(new URL('api/results/token', base).toString(), {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const { token } = await res.json();
+    return typeof token === 'string' ? token : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * @param {object} payload
  * @param {string} base document.baseURI
+ * @param {string} token з requestToken()
  * @param {typeof fetch} [fetchImpl]
  * @returns {Promise<boolean>} чи збережено
  */
-export async function submitResult(payload, base, fetchImpl = fetch) {
+export async function submitResult(payload, base, token, fetchImpl = fetch) {
   try {
     const res = await fetchImpl(new URL('api/results', base).toString(), {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', [RESULT_TOKEN_HEADER]: token },
       body: JSON.stringify(payload),
       keepalive: true, // долетить, навіть якщо сторінку закриють
       signal: AbortSignal.timeout(5000),

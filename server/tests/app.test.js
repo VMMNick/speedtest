@@ -3,10 +3,11 @@ import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { memoryRepository } from '../src/db.js';
 import { chunks } from '../src/routes/speed.js';
+import { TEST_ENV, postResult } from './fixtures.js';
 
-const config = loadConfig({ MAX_TRANSFER_BYTES: '5000000', RATE_RESULTS_PER_MIN: '1000' });
+const config = loadConfig({ ...TEST_ENV, MAX_TRANSFER_BYTES: '5000000', RATE_RESULTS_PER_MIN: '1000' });
 /** Окремо — маленький ліміт, щоб перевірити 429 */
-const strictConfig = loadConfig({ RATE_RESULTS_PER_MIN: '3' });
+const strictConfig = loadConfig({ ...TEST_ENV, RATE_RESULTS_PER_MIN: '3' });
 
 const validResult = {
   server: 'self',
@@ -118,7 +119,7 @@ describe('результати', () => {
   afterAll(() => app.close());
 
   it('POST /api/results — зберігає валідний результат', async () => {
-    const res = await app.inject({ method: 'POST', url: '/api/results', payload: validResult });
+    const res = await postResult(app, validResult);
     expect(res.statusCode).toBe(201);
     expect(res.json()).toMatchObject({ id: 1 });
     expect(repo.rows[0]).toMatchObject({ download: 512.3, grade: 'A', isp: 'Test ISP' });
@@ -134,24 +135,18 @@ describe('результати', () => {
     ['задовгий провайдер', { ...validResult, isp: 'x'.repeat(101) }],
     ['бракує поля', (({ ping: _p, ...rest }) => rest)(validResult)],
   ])('відхиляє: %s', async (_name, payload) => {
-    const res = await app.inject({ method: 'POST', url: '/api/results', payload });
+    const res = await postResult(app, payload);
     expect(res.statusCode).toBe(400);
   });
 
   it('rate limit на збереження результатів', async () => {
     const fresh = await buildApp({ config: strictConfig, logger: false });
-    const send = () =>
-      fresh.inject({ method: 'POST', url: '/api/results', payload: validResult, remoteAddress: '203.0.113.9' });
+    const send = () => postResult(fresh, validResult, { remoteAddress: '203.0.113.9' });
     const codes = [];
     for (let i = 0; i < 5; i++) codes.push((await send()).statusCode);
     expect(codes).toEqual([201, 201, 201, 429, 429]);
     // Інша IP — свій ліміт
-    const other = await fresh.inject({
-      method: 'POST',
-      url: '/api/results',
-      payload: validResult,
-      remoteAddress: '203.0.113.10',
-    });
+    const other = await postResult(fresh, validResult, { remoteAddress: '203.0.113.10' });
     expect(other.statusCode).toBe(201);
     await fresh.close();
   });
@@ -189,7 +184,7 @@ describe('статика', () => {
 
 describe('SPEED_ENDPOINTS=false (хмарний тариф)', () => {
   it('вимірювальні ендпоінти вимкнені (фронтенд перейде на Cloudflare), результати працюють', async () => {
-    const app = await buildApp({ config: loadConfig({ SPEED_ENDPOINTS: 'false' }), logger: false });
+    const app = await buildApp({ config: loadConfig({ ...TEST_ENV, SPEED_ENDPOINTS: 'false' }), logger: false });
     expect((await app.inject('/api/download?bytes=100')).statusCode).toBe(404);
     expect(
       (
@@ -204,7 +199,7 @@ describe('SPEED_ENDPOINTS=false (хмарний тариф)', () => {
     expect((await app.inject('/api/ping')).statusCode).toBe(404);
     expect((await app.inject('/api/meta')).statusCode).toBe(404);
     expect((await app.inject('/api/health')).statusCode).toBe(200);
-    expect((await app.inject({ method: 'POST', url: '/api/results', payload: validResult })).statusCode).toBe(201);
+    expect((await postResult(app, validResult)).statusCode).toBe(201);
     await app.close();
   });
 });
@@ -220,14 +215,48 @@ describe('значення за замовчуванням на Render (RENDER=t
   });
 
   it('за проксі rate limit рахується по справжній IP клієнта (X-Forwarded-For)', async () => {
-    const env = { RENDER: 'true', RATE_RESULTS_PER_MIN: '1' };
+    const env = { ...TEST_ENV, RENDER: 'true', RATE_RESULTS_PER_MIN: '1' };
     const app = await buildApp({ config: loadConfig(env), logger: false });
-    const post = (ip) =>
-      app.inject({ method: 'POST', url: '/api/results', payload: validResult, headers: { 'x-forwarded-for': ip } });
+    const post = (ip) => postResult(app, validResult, { headers: { 'x-forwarded-for': ip } });
     expect((await post('198.51.100.1')).statusCode).toBe(201);
     expect((await post('198.51.100.1')).statusCode).toBe(429);
     // Інший клієнт за тим самим проксі — не страждає від чужого ліміту
     expect((await post('198.51.100.2')).statusCode).toBe(201);
     await app.close();
+  });
+});
+
+describe('токени результатів (захист від підкинутих результатів)', () => {
+  let app;
+  beforeAll(async () => {
+    app = await buildApp({ config: loadConfig({ RATE_TOKENS_PER_MIN: '1000' }), logger: false });
+  });
+  afterAll(() => app.close());
+
+  const token = async () => (await app.inject('/api/results/token')).json().token;
+  const post = (t) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/results',
+      payload: validResult,
+      headers: t === undefined ? {} : { 'x-result-token': t },
+    });
+
+  it('GET /api/results/token: токен, межі віку, без кешу', async () => {
+    const res = await app.inject('/api/results/token');
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.json()).toMatchObject({ token: expect.stringMatching(/^\d+\.[\w-]+\.[\w-]+$/), minAgeMs: 5000 });
+  });
+
+  it('без токена, з підробленим чи щойно виданим — 403', async () => {
+    expect((await post()).json()).toMatchObject({ reason: 'missing' });
+    expect((await post('garbage')).json()).toMatchObject({ reason: 'malformed' });
+    const t = await token();
+    const forged = t.replace(/\.[^.]+$/, '.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+    expect((await post(forged)).json()).toMatchObject({ reason: 'signature' });
+    const res = await post(t); // справжній тест не завершується за мілісекунди
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).toMatchObject({ reason: 'too-early' });
   });
 });

@@ -16,6 +16,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       # true, якщо перед сервером стоїть reverse proxy (nginx, Traefik, Caddy)
       TRUST_PROXY: ${TRUST_PROXY:-false}
+      # Порожньо — випадковий секрет на кожен запуск (див. .env.example)
+      RESULTS_TOKEN_SECRET: ${RESULTS_TOKEN_SECRET:-}
     depends_on:
       db:
         condition: service_healthy

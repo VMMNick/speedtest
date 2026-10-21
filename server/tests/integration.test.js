@@ -7,7 +7,7 @@ import { Redis } from 'ioredis';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { createPool, migrate, pgRepository, memoryRepository } from '../src/db.js';
-import { seed } from './fixtures.js';
+import { seed, TEST_ENV, postResult } from './fixtures.js';
 
 const DB = process.env.TEST_DATABASE_URL;
 const REDIS = process.env.TEST_REDIS_URL;
@@ -46,9 +46,9 @@ describe.skipIf(!DB)('PostgreSQL', () => {
   });
 
   it('insert + stats через HTTP', async () => {
-    const app = await buildApp({ config: loadConfig({}), repo: pgRepository(pool), logger: false });
+    const app = await buildApp({ config: loadConfig(TEST_ENV), repo: pgRepository(pool), logger: false });
     for (const download of [100, 300, 500]) {
-      const res = await app.inject({ method: 'POST', url: '/api/results', payload: { ...result, download } });
+      const res = await postResult(app, { ...result, download });
       expect(res.statusCode).toBe(201);
     }
     const stats = (await app.inject('/api/results/stats')).json();
@@ -73,15 +73,27 @@ describe.skipIf(!REDIS)('Redis rate limit', () => {
   afterAll(() => redis.quit());
 
   it('ліміт спільний для кількох інстансів сервера', async () => {
-    const config = loadConfig({ RATE_RESULTS_PER_MIN: '2' });
+    const config = loadConfig({ ...TEST_ENV, RATE_RESULTS_PER_MIN: '2' });
     const a = await buildApp({ config, redis, logger: false });
     const b = await buildApp({ config, redis, logger: false });
-    const post = (app) =>
-      app.inject({ method: 'POST', url: '/api/results', payload: result, remoteAddress: '192.0.2.50' });
+    const post = (app) => postResult(app, result, { remoteAddress: '192.0.2.50' });
     expect((await post(a)).statusCode).toBe(201);
     expect((await post(b)).statusCode).toBe(201);
     expect((await post(a)).statusCode).toBe(429); // третій — через інший інстанс, але ліміт спільний
     expect((await a.inject('/api/health')).json()).toMatchObject({ redis: 'ok' });
+    await a.close();
+    await b.close();
+  });
+
+  it('токен, виданий одним інстансом, приймає інший (спільний секрет) — і лише один раз', async () => {
+    const config = loadConfig({ ...TEST_ENV, RESULTS_TOKEN_SECRET: 'shared-secret' });
+    const a = await buildApp({ config, redis, logger: false });
+    const b = await buildApp({ config, redis, logger: false });
+    const { token } = (await a.inject('/api/results/token')).json();
+    const post = (app) =>
+      app.inject({ method: 'POST', url: '/api/results', payload: result, headers: { 'x-result-token': token } });
+    expect((await post(b)).statusCode).toBe(201);
+    expect((await post(a)).json()).toMatchObject({ reason: 'reused' }); // реєстр використаних — у спільному Redis
     await a.close();
     await b.close();
   });
@@ -124,19 +136,14 @@ describe.skipIf(!DB)('аналітика: SQL = еталонна реаліза�
     const redis = new Redis(REDIS);
     const keys = await redis.keys('speedtest:analytics:*');
     if (keys.length) await redis.del(...keys);
-    const app = await buildApp({ config: loadConfig({}), repo: pgRepo, redis, logger: false });
+    const app = await buildApp({ config: loadConfig(TEST_ENV), repo: pgRepo, redis, logger: false });
     const a = await app.inject('/api/analytics/providers');
     const b = await app.inject('/api/analytics/providers');
     expect(a.headers['x-cache']).toBe('MISS');
     expect(b.headers['x-cache']).toBe('HIT');
     expect(b.json()).toEqual(a.json());
     // Новий результат інвалідовує кеш — свіжі дані видно одразу, а не через 60 с
-    const post = await app.inject({
-      method: 'POST',
-      url: '/api/results',
-      payload: result,
-      remoteAddress: '192.0.2.77',
-    });
+    const post = await postResult(app, result, { remoteAddress: '192.0.2.77' });
     expect(post.statusCode).toBe(201);
     const c = await app.inject('/api/analytics/providers');
     expect(c.headers['x-cache']).toBe('MISS');

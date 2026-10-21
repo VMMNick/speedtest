@@ -184,8 +184,14 @@ jobs:
         run: |
           curl -fsS http://localhost:8080/api/health | tee /dev/stderr | grep -q '"db":"ok"'
           curl -fsS http://localhost:8080/ | grep -q '<title>'
+          # Без токена результат не приймається; з токеном — лише після мінімального віку (5 с)
+          body='{"server":"self","download":100,"upload":50,"ping":10,"jitter":1,"loss":0,"grade":"A","score":95}'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8080/api/results \
+            -H 'content-type: application/json' -d "$body")" = 403
+          token=$(curl -fsS http://localhost:8080/api/results/token | sed -E 's/.*"token":"([^"]+)".*/\1/')
+          sleep 6
           curl -fsS -X POST http://localhost:8080/api/results -H 'content-type: application/json' \
-            -d '{"server":"self","download":100,"upload":50,"ping":10,"jitter":1,"loss":0,"grade":"A","score":95}'
+            -H "x-result-token: $token" -d "$body"
           curl -fsS http://localhost:8080/api/results/stats | grep -q '"count":1'
           test "$(docker inspect -f '{{.Config.User}}' speedtest:latest)" = node
 

@@ -23,3 +23,23 @@ export const SEED = [
 export async function seed(repo) {
   for (const { result, createdAt } of SEED) await repo.insert(result, { createdAt });
 }
+
+/** Конфіг для тестів: токени результатів без мінімального віку (тест не чекає 5 с) */
+export const TEST_ENV = { RESULTS_TOKEN_MIN_AGE_MS: '0', RATE_TOKENS_PER_MIN: '10000' };
+
+/**
+ * POST /api/results так, як це робить браузер: спершу токен, потім результат із ним.
+ * @param {import('fastify').FastifyInstance} app
+ * @param {object} payload
+ * @param {object} [inject] додаткові поля для app.inject (remoteAddress, headers…)
+ */
+export async function postResult(app, payload, inject = {}) {
+  const { token } = (await app.inject({ method: 'GET', url: '/api/results/token' })).json();
+  return app.inject({
+    method: 'POST',
+    url: '/api/results',
+    payload,
+    ...inject,
+    headers: { 'x-result-token': token, ...(inject.headers ?? {}) },
+  });
+}

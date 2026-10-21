@@ -29,6 +29,17 @@ export function loadConfig(env = process.env) {
      * а сервер лише збирає статистику.
      */
     speedEndpoints: bool(env.SPEED_ENDPOINTS, !onRender),
+    /**
+     * Токени результатів (див. tokens.js). Секрет спільний для всіх інстансів; без нього —
+     * випадковий на кожен запуск (токени, видані до перезапуску, стануть недійсними — це прийнятно).
+     */
+    resultTokens: {
+      secret: env.RESULTS_TOKEN_SECRET || null,
+      /** Мінімальний вік токена: справжній тест триває щонайменше стільки */
+      minAgeMs: int(env.RESULTS_TOKEN_MIN_AGE_MS, 5_000),
+      maxAgeMs: int(env.RESULTS_TOKEN_MAX_AGE_MS, 15 * 60_000),
+      perMinute: int(env.RATE_TOKENS_PER_MIN, 20),
+    },
     limits: {
       /** Максимальний розмір одного download/upload-запиту */
       maxTransferBytes: int(env.MAX_TRANSFER_BYTES, 100_000_000),
