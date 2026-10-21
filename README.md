@@ -1,273 +1,119 @@
-# Спідтест — Internet Speed Test
+<div align="center">
+
+# Спідтест
+
+**Точний браузерний тест швидкості інтернету на чистому JavaScript**
+
+Пінг · джиттер · втрати · download · upload · bufferbloat · стабільність з'єднання
 
 [![CI](https://github.com/VMMNick/speedtest/actions/workflows/ci.yml/badge.svg)](https://github.com/VMMNick/speedtest/actions/workflows/ci.yml)
+[![DB backup](https://github.com/VMMNick/speedtest/actions/workflows/backup.yml/badge.svg)](https://github.com/VMMNick/speedtest/actions/workflows/backup.yml)
+![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933?logo=node.js&logoColor=white)
+![Initial JS](https://img.shields.io/badge/initial%20JS-~8%20KB%20gzip-0a7cff)
+![Lighthouse](https://img.shields.io/badge/Lighthouse-98%20%C2%B7%20100%20%C2%B7%20100-0cce6b?logo=lighthouse&logoColor=white)
 
-**Демо:** https://vmmnick.github.io/speedtest/
+[**Відкрити демо**](https://vmmnick.github.io/speedtest/) · [Версія з аналітикою](https://speedtest-v003.onrender.com/analytics.html) (безкоштовний сервер прокидається до хвилини) · [Як це працює](docs/measurement.md) · [Архітектура](docs/architecture.md)
 
-Браузерний тест швидкості інтернету на чистому JavaScript: **пінг, джиттер, втрати, download, upload, пінг під навантаженням (bufferbloat)** та інтегральна оцінка стабільності з'єднання. Усі вимірювання виконуються у **Web Worker**, тож інтерфейс не фризить навіть на гігабітних каналах.
+<img src="docs/media/demo.gif" alt="Повний тест: пінг, завантаження й вивантаження з живим графіком, підсумкова оцінка" width="900">
+
+</div>
+
+## Чому цей проєкт цікавий
+
+- **Вимірювання, а не «прогрес-бар».** Швидкість — 90-й перцентиль у ковзному вікні після розгону TCP (як у Cloudflare й Ookla), пінг — із Resource Timing API з відніманням часу сервера (`Server-Timing`), раннє завершення, коли швидкість стабілізувалась (CV ≤ 5%). [Деталі →](docs/measurement.md)
+- **Bufferbloat.** Окремо міряється пінг _під навантаженням_ — те, що відчувається в іграх і відеодзвінках, але чого не показують звичайні спідтести.
+- **Інтерфейс не фризить навіть на гігабіті.** Увесь рушій працює у Web Worker; Chart.js (~90% JS) вантажиться лише коли знадобиться — стартовий JS ~8 KB gzip.
+- **Повний стек.** Опційний бекенд на Fastify + PostgreSQL + Redis: анонімна статистика, рейтинг провайдерів і теплова карта «коли інтернет найшвидший» з k-анонімністю та кешем агрегацій.
+- **Production-гігієна.** Сувора CSP без `unsafe-inline`, PWA з власним service worker, 2 мови з перемиканням «на льоту», WCAG 2.1 AA (axe), ~200 тестів, CI з 6 джобами, щоденний бекап бази.
+
+## Скріншоти
+
+| Світла тема                                                   | Темна тема                                                  |
+| ------------------------------------------------------------- | ----------------------------------------------------------- |
+| ![Результат тесту — світла тема](docs/media/result-light.png) | ![Результат тесту — темна тема](docs/media/result-dark.png) |
+
+| Аналітика (демо-дані)                                            | Історія                                               | Мобільний                                                           |
+| ---------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------- |
+| ![Рейтинг провайдерів і теплова карта](docs/media/analytics.png) | ![Історія тестів із графіком](docs/media/history.png) | <img src="docs/media/mobile.png" alt="Мобільна версія" width="220"> |
+
+> Провайдери на скріншотах вигадані, а «мережа» — локальний сервер з обмеженою швидкістю: зйомку відтворює `npm run media`.
 
 ## Можливості
 
-- Анімований датчик із нелінійною шкалою (0–1000 Мбіт/с, автоматично до 10 Гбіт/с) і графік швидкості в реальному часі (Chart.js)
-- Паралельні потоки з адаптивним розміром чанка (росте, доки запит не триватиме ~1 с)
-- Відкидання TCP slow start (перші 1.5 с) у фінальному результаті
-- Пінг під навантаженням → оцінка bufferbloat (A–F)
-- Оцінка стабільності 0–100 + придатність для ігор, відеодзвінків, 4K-стрімінгу
-- Історія тестів в IndexedDB (фолбек — localStorage), графік історії, фільтр за періодом (24 год / 7 / 30 днів), експорт у CSV, очищення з підтвердженням
-- Порівняння з попереднім тестом: бейджі ↑/↓ % на картках (зелені — краще, червоні — гірше, зміни < 3% — «без змін»)
-- Тариф провайдера: скільки відсотків заявленої швидкості ви реально отримуєте
-- Спарклайн пінгу — видно стрибки затримки, а не лише медіану
-- Поділитися результатом: посилання (`#r=…` — результат закодований у самому URL, без сервера; IP і провайдер туди не потрапляють), PNG-картка 1200×630 для соцмереж, нативне меню «Поділитися» на мобільних
-- Українська та англійська: мова визначається за браузером, перемикач у шапці, переклад «на льоту» без перезавантаження (разом із уже показаними результатами, графіками й CSV)
-- PWA: встановлюється як застосунок, інтерфейс і історія працюють офлайн (власний service worker без workbox), оновлення — за кнопкою «Оновити»
-- Світла/темна тема (з урахуванням налаштувань ОС), звук завершення (Web Audio API)
-- Адаптивна верстка, клавіатура (`Enter` — старт, `Esc` — стоп), `prefers-reduced-motion`
+|                   |                                                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Вимірювання**   | пінг, джиттер (RFC 3550), втрати, download/upload у паралельних потоках з адаптивним чанком, bufferbloat (A–F), стабільність 0–100 |
+| **Інтерпретація** | придатність для ігор, відеодзвінків і 4K; % від тарифу провайдера; порівняння з попереднім тестом ↑/↓                              |
+| **Історія**       | IndexedDB (фолбек — localStorage), графік, фільтр за періодом, експорт CSV                                                         |
+| **Поділитися**    | посилання з результатом у самому URL (без сервера й без IP), PNG-картка 1200×630, нативне меню на мобільних                        |
+| **Аналітика**     | рейтинг провайдерів (медіана й P90), фільтр за містом, теплова карта день × година у часовому поясі користувача                    |
+| **Досвід**        | PWA й офлайн, світла/темна тема без блимання, uk/en, клавіатура (`Enter`/`Esc`), `prefers-reduced-motion`, гігабітна шкала         |
+
+## Як це влаштовано
+
+```mermaid
+flowchart LR
+  subgraph Browser["Браузер"]
+    UI["UI · app.js<br/>датчик, графіки, історія"]
+    W["Web Worker<br/>NetworkEngine"]
+    DB[("IndexedDB<br/>історія")]
+    UI <-- postMessage --> W
+    UI --- DB
+  end
+  CF["Cloudflare<br/>speed.cloudflare.com"]
+  subgraph Server["Fastify (Docker на Render)"]
+    API["/api/results<br/>/api/analytics"]
+  end
+  PG[("PostgreSQL<br/>Neon")]
+  R[("Redis<br/>кеш і rate limit")]
+  W -- "ping · __down · __up" --> CF
+  UI -- "анонімний результат (за згодою)" --> API
+  API --> PG
+  API --> R
+  GH["GitHub Actions"] -. "щоденний pg_dump" .-> PG
+```
+
+- **`src/core`** — чиста логіка вимірювань без DOM (працює у воркері, тестується в Node); **`src/services`** — мережа, сховище, PWA; **`src/ui`** — усе, що торкається DOM; **`shared/`** — JSON Schema результату, спільна для браузера й сервера.
+- Межі шарів перевіряє ESLint, а контрактний тест проганяє тіло запиту з браузера через справжню валідацію сервера. [Архітектура →](docs/architecture.md)
+- Три режими збірки з одного коду: **GitHub Pages** (лише Cloudflare), **cloud** (Render: Cloudflare + статистика), **selfhosted** (власні ендпоінти вимірювань — для перевірки Wi-Fi у локальній мережі).
+
+## Технології
+
+| Шар            | Стек                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| Фронтенд       | Vanilla JS (ES-модулі, JSDoc + `checkJs`), Web Workers, Chart.js, Vite, власні плагіни CSP і service worker |
+| Бекенд         | Node.js 22, Fastify 5, PostgreSQL (Neon), Redis, JSON Schema                                                |
+| Якість         | Vitest, Playwright (E2E + axe), ESLint, Prettier, TypeScript-перевірка JS                                   |
+| Інфраструктура | Docker (multi-stage, non-root), GitHub Actions, GitHub Pages, Render, Dependabot                            |
 
 ## Швидкий старт
 
 ```bash
 npm install
-npm run dev       # http://localhost:5173
-npm test          # Vitest
-npm run build     # збірка в dist/
-npm run preview   # перегляд продакшн-збірки
+npm run dev          # http://localhost:5173
+npm run check        # lint + format + typecheck + юніт-тести
+npm run test:e2e     # Playwright (потрібен npx playwright install chromium)
 ```
 
-Потрібен Node.js 22.12+ (Node 20 вже не підтримується Vitest 5 і досяг кінця життєвого циклу).
-
-## Якість коду
-
-| Команда                           | Що робить                                                                             |
-| --------------------------------- | ------------------------------------------------------------------------------------- |
-| `npm run lint` / `lint:fix`       | ESLint (flat config, `eslint.config.js`)                                              |
-| `npm run format` / `format:check` | Prettier (`.prettierrc.json`)                                                         |
-| `npm run typecheck`               | TypeScript перевіряє JS за JSDoc-типами (`jsconfig.json`, типи — `src/core/types.js`) |
-| `npm run check`                   | усе разом + тести — запускати перед комітом                                           |
-| `npm run size`                    | бюджет розміру бандла (gzip) після `npm run build`                                    |
-
-## Продуктивність
-
-| Що                      | Розмір (gzip) | Бюджет |
-| ----------------------- | ------------- | ------ |
-| Стартовий JS            | ~8 KB         | 20 KB  |
-| Стартовий CSS           | ~5 KB         | 12 KB  |
-| Chart.js (лінивий чанк) | ~58 KB        | 70 KB  |
-| Воркер                  | ~4 KB         | 10 KB  |
-
-- **Chart.js вантажиться ліниво** — окремим чанком лише при наведенні/фокусі на «Старт» чи «Історію» або на першу вимогу. До цього стартовий JS займав ~68 KB.
-- **Шрифти локально** (`@fontsource-variable/inter`, `jetbrains-mono`) — без запитів до Google; через `unicode-range` браузер вантажить лише латиницю/кирилицю. Шрифти не вбудовуються як `data:` (сумісність із CSP).
-- Ряд швидкості для графіка рахується за один прохід (O(n)), payload для upload кешується між тестами.
-- `npm run size` перевіряє бюджет у CI — випадковий статичний імпорт Chart.js зламає збірку.
-- Lighthouse (локально, мобільний профіль): **Performance 98 · Accessibility 100 · SEO 100**, CLS 0, TBT 0 мс.
-
-## E2E-тести (Playwright)
+Повний стек із базою і Redis:
 
 ```bash
-npx playwright install chromium   # один раз — завантажити браузер
-npm run test:e2e                  # збирає проєкт, піднімає preview і проганяє тести
-npm run test:e2e:ui               # інтерактивний режим
-npm run test:e2e:report           # HTML-звіт останнього прогону
+docker compose up -d --build   # http://localhost:8080, аналітика — /analytics.html
 ```
 
-- Cloudflare у тестах **підмінений** (`tests/e2e/fixtures.js`): детерміновані відповіді, керовані затримка, швидкість, недоступність і HTTP-помилки.
-- Фази скорочені до ~1 с через тестовий гачок `window.__SPEEDTEST_CONFIG__` (у звичайній роботі не заданий).
-- Сценарії: англійська за мовою браузера та перемикач мови, PWA (маніфест, офлайн-запуск через SW), поділитися (посилання, PNG, пошкоджене посилання), CSP без порушень, лінивий Chart.js (не вантажиться на старті, графік малюється), повний тест, повторний запуск, зупинка, клавіатура, недоступний сервер, HTTP 429, історія (збереження після перезавантаження, видалення, експорт CSV, очищення), теми без блимання, адаптивність (desktop + Pixel 7), доступність (axe WCAG 2.1 AA у світлій і темній темі, озвучення фаз).
-
-## CI
-
-GitHub Actions (`.github/workflows/ci.yml`) на кожен push у `main`, pull request і вручну:
-
-1. **quality** (Node 22 і 24): `npm ci` → ESLint → Prettier → typecheck → Vitest → build (артефакт `dist`)
-2. **e2e** (після quality): Playwright Chromium з кешем браузера → звіт `playwright-report` (артефакт), трейси при падінні
-3. **server** — тести сервера з PostgreSQL і Redis + E2E проти self-hosted збірки
-4. **docker** — збірка образу, `docker compose up --wait`, смоук-тест API
-5. **deploy** (лише `main`, після всього вище): збірка з `BASE_PATH=/<repo>/` → GitHub Pages
-6. **live** (після deploy): Playwright проти задеплоєного сайту і **справжнього** Cloudflare — CORS, base path, CSP, повний тест
-
-Dependabot щотижня оновлює npm-залежності (dev-інструменти одним PR) і щомісяця — версії GitHub Actions.
-
-## Локалізація
-
-- Словники: `src/i18n/uk.js` (основна і запасна мова) та `src/i18n/en.js`; власний модуль `src/i18n/index.js` (~60 рядків, без залежностей).
-- Статична розмітка: `data-i18n="key"` (текст) і `data-i18n-attr="title:key;aria-label:key"` (атрибути). Динамічний текст — через `t('key', { param })`.
-- Помилки рушія мають машинні коди (`UNREACHABLE`, `TRANSFER_FAILED`) — інтерфейс перекладає їх за кодом.
-- Тести стежать за цілісністю: однакові ключі й плейсхолдери в усіх мовах, жодної кирилиці в англійському словнику і **жодного жорстко прописаного українського тексту в UI-коді** (усе має йти через `t()`).
-- Англійська назва — «Speedcheck» («Speedtest» — торгова марка Ookla).
-- Щоб додати мову: новий файл у `src/i18n/`, рядок у `DICTIONARIES`/`LOCALES` і правило в `detectLang`.
-
-## PWA
-
-- `public/manifest.webmanifest` + іконки в `public/icons/` (згенеровані `scripts/generate-icons.py`, є maskable).
-- Service worker генерується під час збірки плагіном `config/vite-plugin-sw.js` із шаблону `config/sw-template.js`: список precache — з файлів збірки, версія кешу — хеш цього списку.
-- Стратегії: HTML — network-first з офлайн-фолбеком; власна статика — cache-first; **запити до Cloudflare не перехоплюються і не кешуються** — вимірювання завжди йдуть у мережу.
-- Нова версія не підміняє сторінку посеред тесту: користувач бачить тост «Доступна нова версія → Оновити».
-- У dev-режимі SW не реєструється (не заважає HMR).
-
-## Деплой і безпека
-
-- **GitHub Pages** через Actions. Один раз: _Settings → Pages → Build and deployment → Source: **GitHub Actions**_.
-- **Base path** задається змінною `BASE_PATH` (за замовчуванням `/`), тож ту саму збірку можна викласти будь-куди.
-- **Content-Security-Policy** додається в продакшн-збірку як `<meta>` плагіном `config/vite-plugin-csp.js` (Pages не дозволяє власні HTTP-заголовки). `default-src 'none'`, без `unsafe-inline`/`unsafe-eval`; хеш inline-скрипта теми рахується автоматично. Мережа дозволена лише до `self` і `speed.cloudflare.com`. Відсутність порушень перевіряють E2E- і live-тести.
-- Живий smoke-тест вручну: `LIVE_URL=https://vmmnick.github.io/speedtest/ npm run test:live`.
-
-Рекомендовані розширення VS Code — у `.vscode/extensions.json`.
-
-## Власний сервер (Fastify + PostgreSQL + Redis)
-
-Крім Cloudflare, застосунок може міряти швидкість **до власного сервера** — напр. у локальній мережі (перевірка Wi-Fi/роутера без інтернету) або на своєму VPS — і збирати анонімну статистику.
-
-```bash
-docker compose up -d --build   # http://localhost:8080
-```
-
-| Сервіс  | Образ                     | Роль                                                                   |
-| ------- | ------------------------- | ---------------------------------------------------------------------- |
-| `app`   | збирається з `Dockerfile` | фронтенд (збірка `selfhosted`) + API на Fastify, non-root, healthcheck |
-| `db`    | `postgres:17-alpine`      | анонімні результати (volume `pgdata`)                                  |
-| `redis` | `redis:7-alpine`          | спільні лічильники rate limit для кількох інстансів                    |
-
-**API** (`server/`):
-
-| Метод | Шлях                                          | Опис                                                                                   |
-| ----- | --------------------------------------------- | -------------------------------------------------------------------------------------- |
-| GET   | `/api/ping`                                   | порожня відповідь + `Server-Timing: app;dur=…`                                         |
-| GET   | `/api/download?bytes=N`                       | N нестискуваних байтів потоком (без буферизації)                                       |
-| POST  | `/api/upload`                                 | тіло рахується потоком і відкидається; ліміт → 413                                     |
-| GET   | `/api/meta`                                   | IP клієнта у форматі Cloudflare `/meta`                                                |
-| POST  | `/api/results`                                | зберегти результат; JSON Schema, **зайві поля → 400** (напр. IP), CHECK-обмеження в БД |
-| GET   | `/api/results/stats?days=30`                  | кількість, середні швидкості, медіанний пінг                                           |
-| GET   | `/api/health`                                 | стан БД і Redis (503, якщо щось недоступне)                                            |
-| GET   | `/api/analytics/providers?days=&city=`        | рейтинг провайдерів: медіана й P90 download, медіани upload і пінгу                    |
-| GET   | `/api/analytics/cities?days=`                 | міста для фільтра                                                                      |
-| GET   | `/api/analytics/heatmap?days=&tz=&isp=&city=` | медіана download за днем тижня × годиною в часовому поясі клієнта                      |
-
-- **Приватність:** IP-адреси не зберігаються (лише для rate limit у Redis з TTL 1 хв). Надсилання статистики можна вимкнути галочкою внизу сторінки.
-- **Rate limit** на кожен маршрут (`RATE_SPEED_PER_MIN`, `RATE_RESULTS_PER_MIN`); при недоступному Redis вимірювання не ламаються.
-- **Аналітика** (`/analytics.html`, лише в self-hosted збірці): рейтинг провайдерів із фільтром за містом і теплова карта «коли інтернет найшвидший» (7 днів × 24 години, послідовна шкала одного відтінку, окремі кроки для темної теми, текстовий висновок для скрінрідерів). Без Chart.js — таблиця з барами (медіана + риска P90) і CSS-сітка.
-- **k-анонімність:** провайдери й міста з менш ніж 3 тестами не показуються.
-- **Кеш агрегацій у Redis** на 60 с (заголовок `X-Cache: HIT|MISS`); новий результат збільшує версію даних, тож свіжі тести видно одразу.
-- **Часові пояси:** браузери досі віддають застарілі назви (Chrome — `Europe/Kiev`), а PostgreSQL із сучасною tzdata знає лише `Europe/Kyiv` — сервер узгоджує назви (`server/src/timezones.js`).
-- SQL-агрегації звіряються в інтеграційних тестах з еталонною реалізацією в пам'яті (однакові результати для всіх фільтрів і часових поясів).
-- **Міграції** (`server/migrations/*.sql`) застосовуються при старті під `pg_advisory_lock` — безпечно для кількох інстансів.
-- **Кешування статики:** файли з хешем — `immutable` на рік, HTML і `sw.js` — `no-cache`. Безпечні заголовки — `@fastify/helmet`.
-- Фронтенд вмикає власний сервер на етапі збірки (`.env.selfhosted` → `npm run build:self`); `ServerSelector` обирає найшвидший сервер за пінгом. На GitHub Pages лишається тільки Cloudflare.
-
-### Деплой на Render
+Потрібен Node.js 22.12+. Деплой на Render — одна кнопка (Blueprint `render.yaml`):
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/VMMNick/speedtest)
 
-`render.yaml` (Blueprint) створює веб-сервіс із `Dockerfile`, PostgreSQL і Key Value (Redis) у Франкфурті та з'єднує їх через приватну мережу. Деплой — автоматично після зеленого CI (`autoDeployTrigger: checksPass`).
+## Документація
 
-- **Хмарна збірка** (`BUILD_MODE=cloud`, `.env.cloud`): вимірювання йдуть через Cloudflare, а сервер **не роздає** download/upload (`SPEED_ENDPOINTS=false`) — інакше кожен тест з'їдав би сотні МБ безкоштовного трафіку. Сервер зберігає статистику й показує аналітику.
-- **Безкоштовні тарифи:** сервіс засинає після 15 хв простою (перше відкриття ~1 хв), безкоштовна PostgreSQL живе 30 днів, Key Value не зберігається на диск. Для постійної роботи — платні плани в `render.yaml`.
-- **Якщо сервіс створено вручну** (не з `render.yaml`): сервер сам бачить `RENDER=true` і за замовчуванням довіряє проксі (`TRUST_PROXY`) та вимикає ендпоінти вимірювань (`SPEED_ENDPOINTS`) — фронтенд тоді автоматично міряє через Cloudflare. Без `REDIS_URL` rate limit і кеш працюють у пам'яті процесу.
-- **Постійна база — Neon** (безкоштовна PostgreSQL без терміну дії): у веб-сервісі достатньо замінити `DATABASE_URL` на рядок підключення Neon (`…-pooler…/neondb?sslmode=verify-full`); таблиці створяться міграціями при старті.
-- **Щоденний бекап** (`.github/workflows/backup.yml`): `pg_dump` (клієнт PostgreSQL 18 — не старший за сервер) у форматі custom зберігається як артефакт Actions на 30 днів; запуск і вручну (Actions → DB backup → Run workflow). Потрібен секрет `DATABASE_BACKUP_URL` — **прямий** рядок Neon (без `-pooler`). Відновлення: `pg_restore --no-owner --clean --if-exists -d "$DATABASE_URL" speedtest-….dump`.
-- Хмарна збірка перевіряється в CI окремим E2E (`npm run test:e2e:cloud`) і збіркою Docker-образу з `BUILD_MODE=cloud`.
+| Документ                                     | Про що                                                                             |
+| -------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [Як працює вимірювання](docs/measurement.md) | ендпоінти Cloudflare, P90, Server-Timing, раннє завершення, bufferbloat, обмеження |
+| [Архітектура](docs/architecture.md)          | структура папок, правила залежностей між шарами, протокол воркера                  |
+| [Сервер і деплой](docs/server.md)            | API, приватність, аналітика, Docker, Render, Neon, бекапи                          |
+| [Розробка](docs/development.md)              | команди, бюджет розміру, тести, CI, i18n, PWA, CSP, скріншоти                      |
 
-Без Docker:
+## Автор
 
-```bash
-npm ci --prefix server
-npm run build:self
-STATIC_DIR=dist DATABASE_URL=postgres://… REDIS_URL=redis://… npm run server   # обидва URL опційні
-```
-
-Змінні оточення — у `server/src/config.js`, приклад — `.env.example`.
-
-**Тести сервера:** `npm run test:server` (Vitest + `fastify.inject`; з `TEST_DATABASE_URL`/`TEST_REDIS_URL` — ще й інтеграційні: ідемпотентні й паралельні міграції, CHECK-обмеження, спільний rate limit для двох інстансів). `npm run test:e2e:server` — Playwright проти зібраного фронтенду, який роздає Fastify. У CI обидва йдуть із сервісами PostgreSQL і Redis, а окремий джоб збирає Docker-образ і перевіряє `docker compose up` смоук-тестом.
-
-## Як працює вимірювання
-
-Трафік іде через публічний API [speed.cloudflare.com](https://speed.cloudflare.com) (anycast, найближча точка присутності обирається автоматично, CORS дозволений):
-
-| Етап     | Ендпоінт              | Метод                                                                     |
-| -------- | --------------------- | ------------------------------------------------------------------------- |
-| Пінг     | `GET /__down?bytes=0` | 20 запитів, RTT із Resource Timing API (або wall-clock), перший — прогрів |
-| Download | `GET /__down?bytes=N` | 4 потоки × 10 с, байти рахуються зі стриму `ReadableStream`               |
-| Upload   | `POST /__up`          | 3 потоки × 10 с, `text/plain` (без CORS preflight), нестискуваний payload |
-| Метадані | `GET /meta`           | IP, провайдер, місто, точка присутності                                   |
-
-**Метрики** (`src/core/MetricsCalculator.js`):
-
-- **Джиттер** — середня абсолютна різниця між послідовними RTT (RFC 3550)
-- **Втрати** — частка пінг-запитів без відповіді за таймаут (у браузері немає UDP/ICMP, тож це HTTP-апроксимація)
-- **Швидкість** — **90-й перцентиль** швидкості у ковзному вікні 1 с після розгону (як у Cloudflare/Ookla: показує ємність каналу, менш чутлива до випадкових просідань). Середня теж рахується й показується як «сер.» (`CONFIG.aggregate = 'mean'` — щоб зробити її основною)
-- **Пінг без часу сервера** — від RTT віднімається час обробки на сервері з `Server-Timing` (`cfRequestDuration`), з Resource Timing або із заголовка відповіді
-- **Раннє завершення** — якщо після 5 с коефіцієнт варіації швидкості за останні 2.5 с ≤ 5%, фаза зупиняється («достроково»): менше часу й трафіку
-- **Економний режим** — при `Save-Data` або повільній мережі (`navigator.connection`) тест коротший (6 с), з меншою кількістю потоків і чанками (`LIGHT_CONFIG`)
-- **Мультигігабіт** — коли швидкість > 1 Гбіт/с, датчик автоматично перемикається на шкалу до 10 Гбіт/с
-- **Bufferbloat** — приріст медіанного пінгу під навантаженням відносно пінгу в спокої
-- **Стабільність** — 100 мінус штрафи за джиттер, втрати, високий пінг, bufferbloat і нерівність швидкості
-
-Щоб додати власний сервер — допишіть об'єкт у `SERVERS` (`src/core/config.js`) з тими ж полями; `ServerSelector` обере найшвидший за пінгом.
-
-## Архітектура
-
-```
-speedtest/
-├── src/                      фронтенд (Vite root)
-│   ├── index.html · app.js   головна сторінка; app.js — composition root: створює модулі й з'єднує їх
-│   ├── analytics.html · analytics.js   сторінка аналітики (лише в збірках із бекендом)
-│   ├── core/                 чиста логіка без DOM — працює у воркері й тестується в Node
-│   │   ├── config.js         параметри тестів, сервери, режими збірки
-│   │   ├── NetworkEngine.js  рушій: пінг, download, upload, latency під навантаженням
-│   │   ├── MetricsCalculator.js  метрики: P90, джиттер, стабільність, bufferbloat
-│   │   ├── gauge.js · heatmap.js · insights.js · share.js · types.js
-│   ├── services/             введення-виведення
-│   │   ├── StorageManager.js історія (IndexedDB → localStorage) і налаштування
-│   │   ├── ServerSelector.js вибір сервера за пінгом і метадані з'єднання
-│   │   ├── ResultsApi.js     анонімна статистика → POST /api/results
-│   │   ├── sound.js · pwa.js звук завершення (Web Audio) і service worker
-│   ├── ui/                   усе, що працює з DOM
-│   │   ├── UIController.js   датчик, картки метрик, тости, модалка
-│   │   ├── HistoryPanel.js · SharePanel.js   історія/CSV і «Поділитися»
-│   │   ├── ChartManager.js · lazyCharts.js   графіки Chart.js (окремий чанк)
-│   │   ├── ShareCard.js · ThemeManager.js · format.js · dom.js
-│   ├── i18n/                 uk (за замовчуванням) і en
-│   ├── workers/speed.worker.js   NetworkEngine у Web Worker
-│   └── styles/
-├── shared/
-│   └── result-schema.js      контракт клієнт ↔ сервер (JSON Schema + межі полів)
-├── server/                   Fastify API (окремий package.json — у Docker-образ іде лише він)
-│   ├── src/  app.js · config.js · db.js · cache.js · routes/{speed,results,analytics}.js
-│   ├── migrations/           SQL-міграції (застосовуються при старті)
-│   └── tests/                юніт, інтеграційні (PostgreSQL/Redis) і контрактний тест
-├── tests/
-│   ├── unit/                 Vitest: рушій, метрики, сховище, i18n, CSP…
-│   ├── e2e/                  Playwright з підмінним Cloudflare (GitHub Pages-збірка)
-│   ├── e2e-server/ · e2e-cloud/   фронтенд + Fastify (selfhosted і cloud-режими)
-│   └── live/                 смоук проти розгорнутого сайту і справжнього Cloudflare
-├── config/                   Vite-плагіни (CSP, service worker)
-├── scripts/                  бюджет розміру бандла, генерація іконок
-├── public/                   статика: іконки, manifest, robots.txt
-└── Dockerfile · docker-compose.yml · render.yaml · .github/workflows/{ci,backup}.yml
-```
-
-### Правила залежностей
-
-```
-app.js / analytics.js ──► ui ──► services ──► core
-                            └──────────────► core
-services/ResultsApi ──► shared ◄── server
-```
-
-- **core** не знає про DOM, i18n, UI і сервіси — тому рушій працює у воркері й повністю покритий тестами в Node.
-- **services** не імпортують **ui**; тексти інтерфейсу живуть лише в **i18n** (тест шукає кирилицю в коді ui/ і services/).
-- **shared** не має залежностей; сервер і фронтенд не імпортують одне одного — лише через HTTP і `shared/`.
-- Правила перевіряє ESLint (`no-restricted-imports`, `no-restricted-globals`), тож порушення ламає CI.
-- Контрактний тест (`server/tests/contract.test.js`) проганяє тіло з `toPayload()` через справжню валідацію сервера, зокрема крайні значення.
-
-### Протокол воркера
-
-```
-main → worker   { type: 'start', server, config? }  |  { type: 'abort' }
-worker → main   phase · progress · result · done · aborted · error
-```
-
-`NetworkEngine` не залежить від DOM — `fetch`, upload і таймер інжектуються через конструктор, тому рушій повністю покритий юніт-тестами в Node.
-
-## Обмеження
-
-- Браузерний тест зазвичай показує трохи менше за нативні застосунки (накладні витрати HTTP, обмеження браузера на кількість з'єднань).
-- Cloudflare може обмежувати дуже часті тести (HTTP 429) — рушій зупиняє потік після 3 помилок поспіль і показує зрозуміле повідомлення.
+Mykola Vorobkanych ([@VMMNick](https://github.com/VMMNick)) — full-stack розробник.
