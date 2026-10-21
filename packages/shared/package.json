@@ -1,0 +1,10 @@
+{
+  "name": "@speedtest/shared",
+  "version": "1.0.0",
+  "description": "Контракт клієнт ↔ сервер: JSON Schema результату, межі полів, заголовок токена",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./result-schema": "./result-schema.js"
+  }
+}

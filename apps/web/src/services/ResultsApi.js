@@ -4,7 +4,7 @@
  * IP-адреса не надсилається; провайдер/місто/країна — лише якщо їх повернув /meta.
  */
 
-import { RESULT_LIMITS, TEXT_MAX, COUNTRY_RE, RESULT_TOKEN_HEADER } from '../../shared/result-schema.js';
+import { RESULT_LIMITS, TEXT_MAX, COUNTRY_RE, RESULT_TOKEN_HEADER } from '@speedtest/shared/result-schema';
 
 /** Округлення до сотих і обмеження межами схеми — сервер не відхилить запит через викид */
 const fit = (x, max) => Math.min(max, Math.max(0, Math.round((Number(x) || 0) * 100) / 100));
@@ -13,7 +13,7 @@ const fit = (x, max) => Math.min(max, Math.max(0, Math.round((Number(x) || 0) * 
 const text = (v) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, TEXT_MAX) : null);
 
 /**
- * Перетворює результат тесту на тіло запиту за спільною схемою (shared/result-schema.js).
+ * Перетворює результат тесту на тіло запиту за спільною схемою (packages/shared/result-schema.js).
  * @param {import('../core/types.js').TestResult} r
  * @param {{ isp?: string | null, city?: string | null, country?: string | null } | null} meta
  * @param {{ lightMode?: boolean }} [extra]

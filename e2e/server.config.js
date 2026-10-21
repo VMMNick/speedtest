@@ -5,12 +5,13 @@
  *   npm run test:e2e:server
  *   (опційно DATABASE_URL / REDIS_URL — тоді з PostgreSQL і Redis)
  */
+import { fileURLToPath } from 'node:url';
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4180;
 
 export default defineConfig({
-  testDir: './tests/e2e-server',
+  testDir: './server',
   retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
@@ -22,13 +23,15 @@ export default defineConfig({
   },
   projects: [{ name: 'selfhosted', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'npm run build:self && node server/src/index.js',
+    cwd: '..',
+    command: 'npm run build:self && npm run server',
     url: `http://localhost:${PORT}/api/health`,
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
       PORT: String(PORT),
-      STATIC_DIR: 'dist',
+      // Абсолютний шлях: сервер запускається з теки свого воркспейсу (apps/server)
+      STATIC_DIR: fileURLToPath(new URL('../apps/web/dist', import.meta.url)),
       LOG_LEVEL: 'warn',
       // Тест у браузері з короткими фазами триває ~3 с — мінімальний вік токена 1 с (у продакшні 5 с)
       RESULTS_TOKEN_MIN_AGE_MS: '1000',

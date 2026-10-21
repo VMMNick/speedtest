@@ -14,9 +14,9 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { createSecureServer } from 'node:http2';
 import { join } from 'node:path';
 import { chromium, devices } from '@playwright/test';
-import { buildApp } from '../server/src/app.js';
-import { loadConfig } from '../server/src/config.js';
-import { memoryRepository } from '../server/src/db.js';
+import { buildApp } from '../apps/server/src/app.js';
+import { loadConfig } from '../apps/server/src/config.js';
+import { memoryRepository } from '../apps/server/src/db.js';
 
 const OUT = 'docs/media';
 const TMP = 'test-results/media-video';
@@ -89,10 +89,10 @@ async function seed(repo) {
 }
 
 async function startServer() {
-  execFileSync('npx', ['vite', 'build', '--mode', 'selfhosted', '--logLevel', 'warn'], { stdio: 'inherit' });
+  execFileSync('npm', ['run', 'build:self', '--', '--logLevel', 'warn'], { stdio: 'inherit' });
   const repo = memoryRepository();
   await seed(repo);
-  const config = loadConfig({ STATIC_DIR: 'dist', SPEED_ENDPOINTS: 'false', RATE_RESULTS_PER_MIN: '10000' });
+  const config = loadConfig({ STATIC_DIR: 'apps/web/dist', SPEED_ENDPOINTS: 'false', RATE_RESULTS_PER_MIN: '10000' });
   const app = await buildApp({ config, repo, logger: false });
   await app.listen({ host: '127.0.0.1', port: PORT });
   return app;

@@ -60,7 +60,7 @@ Ping · jitter · loss · download · upload · bufferbloat · connection stabil
   <img src="docs/media/architecture-light.svg" alt="Architecture: the browser (UI and a Web Worker) measures against Cloudflare, the anonymous result goes to Fastify, data lives in PostgreSQL and Redis, GitHub Actions backs it up nightly" width="760">
 </picture>
 
-- **`src/core`** — pure measurement logic without the DOM (runs in the worker, tested in Node); **`src/services`** — network, storage, PWA; **`src/ui`** — everything that touches the DOM; **`shared/`** — the result's JSON Schema, shared by browser and server.
+- **`apps/web/src/core`** — pure measurement logic without the DOM (runs in the worker, tested in Node); **`apps/web/src/services`** — network, storage, PWA; **`apps/web/src/ui`** — everything that touches the DOM; **`packages/shared`** — the result's JSON Schema, shared by the browser and the server (`apps/server`). An npm workspaces monorepo: one `npm install` sets up everything.
 - ESLint enforces the layer boundaries, and a contract test runs the browser's request body through the server's real validation. [Architecture →](docs/architecture.md)
 - Three build modes from one codebase: **GitHub Pages** (Cloudflare only), **cloud** (Render: Cloudflare + statistics), **selfhosted** (its own measurement endpoints — to check Wi-Fi on a local network).
 

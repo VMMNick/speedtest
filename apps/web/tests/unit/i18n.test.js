@@ -1,5 +1,9 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+/** Шлях відносно apps/web — тест не залежить від того, з якої теки його запущено */
+const web = (p) => fileURLToPath(new URL(`../../${p}`, import.meta.url));
 import { DICTIONARIES, t, setLang, loadLang, getLang, getLocale, detectLang } from '../../src/i18n/index.js';
 
 // Англійська вантажиться окремим чанком — у тестах довантажуємо її заздалегідь
@@ -74,12 +78,12 @@ describe('жорстко прописаний текст в інтерфейсі
   const files = [
     'src/app.js',
     'src/analytics.js',
-    ...readdirSync('src/ui').map((f) => `src/ui/${f}`),
-    ...readdirSync('src/services').map((f) => `src/services/${f}`),
+    ...readdirSync(web('src/ui')).map((f) => `src/ui/${f}`),
+    ...readdirSync(web('src/services')).map((f) => `src/services/${f}`),
   ].filter((f) => f.endsWith('.js'));
   for (const file of files) {
     it(file, () => {
-      const code = readFileSync(file, 'utf8')
+      const code = readFileSync(web(file), 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '') // блокові коментарі
         .replace(/(^|[^:])\/\/.*$/gm, '$1') // рядкові коментарі
         .replace(/console\.\w+\([^\n]*/g, ''); // журнали для розробника не перекладаються

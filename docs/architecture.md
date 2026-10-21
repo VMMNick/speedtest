@@ -2,44 +2,42 @@
 
 [← README](../README.md) · [Вимірювання](measurement.md) · [Архітектура](architecture.md) · [Сервер і деплой](server.md) · [Розробка](development.md)
 
+Монорепозиторій на **npm workspaces**: один `package-lock.json`, один `npm install` у корені ставить фронтенд, сервер і спільний пакет; `@speedtest/shared` підключається як звичайна залежність, а не відносним шляхом.
+
 ```
 speedtest/
-├── src/                      фронтенд (Vite root)
-│   ├── index.html · app.js   головна сторінка; app.js — composition root: створює модулі й з'єднує їх
-│   ├── analytics.html · analytics.js   сторінка аналітики (лише в збірках із бекендом)
-│   ├── core/                 чиста логіка без DOM — працює у воркері й тестується в Node
-│   │   ├── config.js         параметри тестів, сервери, режими збірки
-│   │   ├── NetworkEngine.js  рушій: пінг, download, upload, latency під навантаженням
-│   │   ├── MetricsCalculator.js  метрики: P90, джиттер, стабільність, bufferbloat
-│   │   ├── gauge.js · heatmap.js · insights.js · share.js · types.js
-│   ├── services/             введення-виведення
-│   │   ├── StorageManager.js історія (IndexedDB → localStorage) і налаштування
-│   │   ├── ServerSelector.js вибір сервера за пінгом і метадані з'єднання
-│   │   ├── ResultsApi.js     анонімна статистика → POST /api/results
-│   │   ├── sound.js · pwa.js звук завершення (Web Audio) і service worker
-│   ├── ui/                   усе, що працює з DOM
-│   │   ├── UIController.js   датчик, картки метрик, тости, модалка
-│   │   ├── HistoryPanel.js · SharePanel.js   історія/CSV і «Поділитися»
-│   │   ├── ChartManager.js · lazyCharts.js   графіки Chart.js (окремий чанк)
-│   │   ├── ShareCard.js · ThemeManager.js · format.js · dom.js
-│   ├── i18n/                 uk (за замовчуванням) і en
-│   ├── workers/speed.worker.js   NetworkEngine у Web Worker
-│   └── styles/
-├── shared/
-│   └── result-schema.js      контракт клієнт ↔ сервер (JSON Schema + межі полів)
-├── server/                   Fastify API (окремий package.json — у Docker-образ іде лише він)
-│   ├── src/  app.js · config.js · db.js · cache.js · routes/{speed,results,analytics}.js
-│   ├── migrations/           SQL-міграції (застосовуються при старті)
-│   └── tests/                юніт, інтеграційні (PostgreSQL/Redis) і контрактний тест
-├── tests/
-│   ├── unit/                 Vitest: рушій, метрики, сховище, i18n, CSP…
-│   ├── e2e/                  Playwright з підмінним Cloudflare (GitHub Pages-збірка)
-│   ├── e2e-server/ · e2e-cloud/   фронтенд + Fastify (selfhosted і cloud-режими)
-│   └── live/                 смоук проти розгорнутого сайту і справжнього Cloudflare
-├── config/                   Vite-плагіни (CSP, service worker)
-├── scripts/                  бюджет розміру бандла, генерація іконок
-├── public/                   статика: іконки, manifest, robots.txt
-└── Dockerfile · docker-compose.yml · render.yaml · .github/workflows/{ci,backup}.yml
+├── apps/
+│   ├── web/                      @speedtest/web — фронтенд (Vite)
+│   │   ├── src/
+│   │   │   ├── index.html · app.js           головна; app.js — composition root
+│   │   │   ├── analytics.html · analytics.js аналітика (лише в збірках із бекендом)
+│   │   │   ├── privacy.html · privacy.js     конфіденційність
+│   │   │   ├── core/          чиста логіка без DOM: config, NetworkEngine, MetricsCalculator,
+│   │   │   │                  gauge, heatmap, insights, share, demoData, types
+│   │   │   ├── services/      введення-виведення: StorageManager, ServerSelector, ResultsApi, sound, pwa
+│   │   │   ├── ui/            DOM: UIController, HistoryPanel, SharePanel, ChartManager, lazyCharts,
+│   │   │   │                  ShareCard, ThemeManager, format, dom
+│   │   │   ├── i18n/          uk (у стартовому бандлі) і en (окремий чанк)
+│   │   │   ├── workers/       speed.worker.js — NetworkEngine у Web Worker
+│   │   │   └── styles/
+│   │   ├── public/            статика: іконки, manifest, robots.txt
+│   │   ├── config/            Vite-плагіни (CSP, service worker)
+│   │   ├── tests/unit/        Vitest: рушій, метрики, сховище, i18n, CSP, демо-дані…
+│   │   ├── vite.config.js · jsconfig.json · .env.cloud · .env.selfhosted · .env.production
+│   │   └── package.json
+│   └── server/                   @speedtest/server — Fastify API
+│       ├── src/               app · config · db · cache · tokens · timezones · routes/{speed,results,analytics}
+│       ├── migrations/        SQL-міграції (застосовуються при старті)
+│       ├── tests/             юніт, інтеграційні (PostgreSQL/Redis), токени, контрактний тест
+│       └── package.json
+├── packages/
+│   └── shared/                   @speedtest/shared — контракт клієнт ↔ сервер (JSON Schema, межі, заголовок токена)
+├── e2e/                          Playwright: web/ · server/ · cloud/ · live/ + конфіг на кожен режим
+├── docs/                         документація й медіа для README
+├── scripts/                      бюджет розміру, скріншоти, схема архітектури, іконки
+├── .github/workflows/            ci.yml · backup.yml
+├── Dockerfile · docker-compose.yml · render.yaml
+└── package.json                  workspaces + скрипти для всього репозиторію
 ```
 
 ### Правила залежностей
@@ -47,12 +45,12 @@ speedtest/
 ```
 app.js / analytics.js ──► ui ──► services ──► core
                             └──────────────► core
-services/ResultsApi ──► shared ◄── server
+services/ResultsApi ──► @speedtest/shared ◄── apps/server
 ```
 
 - **core** не знає про DOM, i18n, UI і сервіси — тому рушій працює у воркері й повністю покритий тестами в Node.
 - **services** не імпортують **ui**; тексти інтерфейсу живуть лише в **i18n** (тест шукає кирилицю в коді ui/ і services/).
-- **shared** не має залежностей; сервер і фронтенд не імпортують одне одного — лише через HTTP і `shared/`.
+- **@speedtest/shared** не має залежностей; сервер і фронтенд не імпортують одне одного — лише через HTTP і спільний пакет.
 - Правила перевіряє ESLint (`no-restricted-imports`, `no-restricted-globals`), тож порушення ламає CI.
 - Контрактний тест (`server/tests/contract.test.js`) проганяє тіло з `toPayload()` через справжню валідацію сервера, зокрема крайні значення.
 

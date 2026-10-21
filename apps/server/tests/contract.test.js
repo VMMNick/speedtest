@@ -1,13 +1,13 @@
 /**
  * Контрактний тест «фронтенд ↔ сервер»: тіло, яке формує браузер (toPayload),
  * сервер приймає без змін — навіть для крайніх значень і дивних метаданих.
- * Обидві сторони беруть межі з shared/result-schema.js.
+ * Обидві сторони беруть межі з packages/shared/result-schema.js.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
-import { toPayload } from '../../src/services/ResultsApi.js';
-import { RESULT_LIMITS } from '../../shared/result-schema.js';
+import { toPayload } from '../../web/src/services/ResultsApi.js';
+import { RESULT_LIMITS } from '@speedtest/shared/result-schema';
 import { TEST_ENV, postResult } from './fixtures.js';
 
 const result = (over = {}) => ({

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockCloudflare, FAST_CONFIG } from '../e2e/fixtures.js';
+import { mockCloudflare, FAST_CONFIG } from '../web/fixtures.js';
 
 test('хмарна збірка: міряє через Cloudflare, статистику зберігає на сервері', async ({ page, context, request }) => {
   await mockCloudflare(context);

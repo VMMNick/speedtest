@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 4173;
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './web',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -29,7 +29,9 @@ export default defineConfig({
 
   // Тестуємо продакшн-збірку — так само, як її побачать користувачі
   webServer: {
-    command: `npm run build && npx vite preview --port ${PORT} --strictPort`,
+    // Команди — з кореня репозиторію (конфіг лежить у e2e/)
+    cwd: '..',
+    command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

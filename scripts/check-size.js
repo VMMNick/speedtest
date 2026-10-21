@@ -7,7 +7,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join } from 'node:path';
 
-const DIST = new URL('../dist/', import.meta.url).pathname;
+const DIST = new URL('../apps/web/dist/', import.meta.url).pathname;
 const KB = 1024;
 
 /** Ліміти в байтах gzip */

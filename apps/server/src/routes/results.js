@@ -7,9 +7,9 @@
  */
 
 import { bumpDataVersion } from '../cache.js';
-import { resultSchema, RESULT_TOKEN_HEADER } from '../../../shared/result-schema.js';
+import { resultSchema, RESULT_TOKEN_HEADER } from '@speedtest/shared/result-schema';
 
-// Схема спільна з фронтендом — див. shared/result-schema.js
+// Схема спільна з фронтендом — див. packages/shared/result-schema.js
 export { resultSchema };
 
 /**

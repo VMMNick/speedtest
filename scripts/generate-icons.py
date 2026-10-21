@@ -1,4 +1,4 @@
-"""Генерує PNG-іконки PWA (192, 512, maskable 512, apple-touch 180) у public/icons/.
+"""Генерує PNG-іконки PWA (192, 512, maskable 512, apple-touch 180) у apps/web/public/icons/.
 
 Запуск: python3 scripts/generate-icons.py  (потрібен Pillow)
 Малюємо у 4× розмірі й зменшуємо — так краї згладжені.
@@ -7,7 +7,7 @@ import math
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-OUT = Path(__file__).resolve().parent.parent / 'public' / 'icons'
+OUT = Path(__file__).resolve().parent.parent / 'apps' / 'web' / 'public' / 'icons'
 OUT.mkdir(parents=True, exist_ok=True)
 C1, C2 = (6, 182, 212), (37, 99, 235)  # cyan → blue
 

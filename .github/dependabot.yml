@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # Монорепозиторій: один package-lock.json у корені покриває фронтенд, сервер і shared
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -16,13 +17,6 @@ updates:
     directory: /
     schedule:
       interval: monthly
-
-  - package-ecosystem: npm
-    directory: /server
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
 
   - package-ecosystem: docker
     directory: /

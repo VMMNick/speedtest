@@ -4,13 +4,13 @@
 
 ## Якість коду
 
-| Команда                           | Що робить                                                                             |
-| --------------------------------- | ------------------------------------------------------------------------------------- |
-| `npm run lint` / `lint:fix`       | ESLint (flat config, `eslint.config.js`)                                              |
-| `npm run format` / `format:check` | Prettier (`.prettierrc.json`)                                                         |
-| `npm run typecheck`               | TypeScript перевіряє JS за JSDoc-типами (`jsconfig.json`, типи — `src/core/types.js`) |
-| `npm run check`                   | усе разом + тести — запускати перед комітом                                           |
-| `npm run size`                    | бюджет розміру бандла (gzip) після `npm run build`                                    |
+| Команда                           | Що робить                                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `npm run lint` / `lint:fix`       | ESLint (flat config, `eslint.config.js`)                                                                |
+| `npm run format` / `format:check` | Prettier (`.prettierrc.json`)                                                                           |
+| `npm run typecheck`               | TypeScript перевіряє JS за JSDoc-типами (`apps/web/jsconfig.json`, типи — `apps/web/src/core/types.js`) |
+| `npm run check`                   | усе разом + тести — запускати перед комітом                                                             |
+| `npm run size`                    | бюджет розміру бандла (gzip) після `npm run build`                                                      |
 
 ## Продуктивність
 
@@ -37,7 +37,7 @@ npm run test:e2e:ui               # інтерактивний режим
 npm run test:e2e:report           # HTML-звіт останнього прогону
 ```
 
-- Cloudflare у тестах **підмінений** (`tests/e2e/fixtures.js`): детерміновані відповіді, керовані затримка, швидкість, недоступність і HTTP-помилки.
+- Cloudflare у тестах **підмінений** (`e2e/web/fixtures.js`): детерміновані відповіді, керовані затримка, швидкість, недоступність і HTTP-помилки.
 - Фази скорочені до ~1 с через тестовий гачок `window.__SPEEDTEST_CONFIG__` (у звичайній роботі не заданий).
 - Сценарії: англійська за мовою браузера та перемикач мови, PWA (маніфест, офлайн-запуск через SW), поділитися (посилання, PNG, пошкоджене посилання), CSP без порушень, лінивий Chart.js (не вантажиться на старті, графік малюється), повний тест, повторний запуск, зупинка, клавіатура, недоступний сервер, HTTP 429, історія (збереження після перезавантаження, видалення, експорт CSV, очищення), теми без блимання, адаптивність (desktop + Pixel 7), доступність (axe WCAG 2.1 AA у світлій і темній темі, озвучення фаз).
 
@@ -45,7 +45,7 @@ npm run test:e2e:report           # HTML-звіт останнього прог�
 
 GitHub Actions (`.github/workflows/ci.yml`) на кожен push у `main`, pull request і вручну:
 
-1. **quality** (Node 22 і 24): `npm ci` → ESLint → Prettier → typecheck → Vitest → build (артефакт `dist`)
+1. **quality** (Node 22 і 24): `npm ci` → ESLint → Prettier → typecheck → Vitest → build (артефакт `apps/web/dist`)
 2. **e2e** (після quality): Playwright Chromium з кешем браузера → звіт `playwright-report` (артефакт), трейси при падінні
 3. **server** — тести сервера з PostgreSQL і Redis + E2E проти self-hosted збірки
 4. **docker** — збірка образу, `docker compose up --wait`, смоук-тест API
@@ -56,17 +56,17 @@ Dependabot щотижня оновлює npm-залежності (dev-інст�
 
 ## Локалізація
 
-- Словники: `src/i18n/uk.js` (основна і запасна мова) та `src/i18n/en.js`; власний модуль `src/i18n/index.js` (~60 рядків, без залежностей).
+- Словники: `apps/web/src/i18n/uk.js` (основна і запасна мова) та `apps/web/src/i18n/en.js`; власний модуль `apps/web/src/i18n/index.js` (~60 рядків, без залежностей).
 - Статична розмітка: `data-i18n="key"` (текст) і `data-i18n-attr="title:key;aria-label:key"` (атрибути). Динамічний текст — через `t('key', { param })`.
 - Помилки рушія мають машинні коди (`UNREACHABLE`, `TRANSFER_FAILED`) — інтерфейс перекладає їх за кодом.
 - Тести стежать за цілісністю: однакові ключі й плейсхолдери в усіх мовах, жодної кирилиці в англійському словнику і **жодного жорстко прописаного українського тексту в UI-коді** (усе має йти через `t()`).
 - Англійська назва — «Speedcheck» («Speedtest» — торгова марка Ookla).
-- Щоб додати мову: новий файл у `src/i18n/`, рядок у `DICTIONARIES`/`LOCALES` і правило в `detectLang`.
+- Щоб додати мову: новий файл у `apps/web/src/i18n/`, рядок у `DICTIONARIES`/`LOCALES` і правило в `detectLang`.
 
 ## PWA
 
-- `public/manifest.webmanifest` + іконки в `public/icons/` (згенеровані `scripts/generate-icons.py`, є maskable).
-- Service worker генерується під час збірки плагіном `config/vite-plugin-sw.js` із шаблону `config/sw-template.js`: список precache — з файлів збірки, версія кешу — хеш цього списку.
+- `apps/web/public/manifest.webmanifest` + іконки в `apps/web/public/icons/` (згенеровані `scripts/generate-icons.py`, є maskable).
+- Service worker генерується під час збірки плагіном `apps/web/config/vite-plugin-sw.js` із шаблону `apps/web/config/sw-template.js`: список precache — з файлів збірки, версія кешу — хеш цього списку.
 - Стратегії: HTML — network-first з офлайн-фолбеком; власна статика — cache-first; **запити до Cloudflare не перехоплюються і не кешуються** — вимірювання завжди йдуть у мережу.
 - Нова версія не підміняє сторінку посеред тесту: користувач бачить тост «Доступна нова версія → Оновити».
 - У dev-режимі SW не реєструється (не заважає HMR).
@@ -75,7 +75,7 @@ Dependabot щотижня оновлює npm-залежності (dev-інст�
 
 - **GitHub Pages** через Actions. Один раз: _Settings → Pages → Build and deployment → Source: **GitHub Actions**_.
 - **Base path** задається змінною `BASE_PATH` (за замовчуванням `/`), тож ту саму збірку можна викласти будь-куди.
-- **Content-Security-Policy** додається в продакшн-збірку як `<meta>` плагіном `config/vite-plugin-csp.js` (Pages не дозволяє власні HTTP-заголовки). `default-src 'none'`, без `unsafe-inline`/`unsafe-eval`; хеш inline-скрипта теми рахується автоматично. Мережа дозволена лише до `self` і `speed.cloudflare.com`. Відсутність порушень перевіряють E2E- і live-тести.
+- **Content-Security-Policy** додається в продакшн-збірку як `<meta>` плагіном `apps/web/config/vite-plugin-csp.js` (Pages не дозволяє власні HTTP-заголовки). `default-src 'none'`, без `unsafe-inline`/`unsafe-eval`; хеш inline-скрипта теми рахується автоматично. Мережа дозволена лише до `self` і `speed.cloudflare.com`. Відсутність порушень перевіряють E2E- і live-тести.
 - Живий smoke-тест вручну: `LIVE_URL=https://vmmnick.github.io/speedtest/ npm run test:live`.
 
 Рекомендовані розширення VS Code — у `.vscode/extensions.json`.

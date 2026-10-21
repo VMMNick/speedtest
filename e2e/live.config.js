@@ -8,7 +8,7 @@ const LIVE_URL = process.env.LIVE_URL;
 if (!LIVE_URL) throw new Error('Задайте LIVE_URL, напр. LIVE_URL=https://vmmnick.github.io/speedtest/');
 
 export default defineConfig({
-  testDir: './tests/live',
+  testDir: './live',
   retries: 1,
   timeout: 90_000,
   expect: { timeout: 20_000 },
