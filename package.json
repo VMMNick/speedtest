@@ -24,6 +24,7 @@
     "test:server": "npm test -w @speedtest/server --",
     "check": "npm run lint && npm run format:check && npm run typecheck && npm test",
     "size": "node scripts/check-size.js",
+    "lighthouse": "npx --yes @lhci/cli@0.15.1 autorun",
     "test:e2e": "playwright test -c e2e/web.config.js",
     "test:e2e:ui": "playwright test -c e2e/web.config.js --ui",
     "test:e2e:report": "playwright show-report e2e/playwright-report",

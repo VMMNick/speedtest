@@ -116,6 +116,36 @@ jobs:
           path: e2e/test-results/
           retention-days: 7
 
+  lighthouse:
+    name: Lighthouse CI
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Та сама збірка, що пройшла quality (без повторного npm ci і build)
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: apps/web/dist/
+
+      # Бюджети й пороги — у lighthouserc.json (мобільний профіль, медіана з 3 прогонів)
+      - name: Lighthouse (mobile, 3 runs)
+        run: npm run lighthouse
+
+      - name: Upload Lighthouse reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-report
+          path: e2e/lighthouse-report/
+          retention-days: 14
+
   server:
     name: Server · PostgreSQL · Redis
     runs-on: ubuntu-latest
@@ -205,7 +235,7 @@ jobs:
 
   deploy:
     name: Deploy → GitHub Pages
-    needs: [quality, e2e, server, docker]
+    needs: [quality, e2e, lighthouse, server, docker]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10

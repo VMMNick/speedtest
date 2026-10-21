@@ -6,3 +6,5 @@ playwright-report/
 test-results/
 playwright-report-live/
 docs/openapi.json
+.lighthouseci/
+lighthouse-report/

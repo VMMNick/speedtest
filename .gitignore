@@ -16,3 +16,5 @@ blob-report/
 .playwright/
 playwright-report-live/
 dump.rdb
+.lighthouseci/
+lighthouse-report/

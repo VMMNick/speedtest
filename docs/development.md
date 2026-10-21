@@ -47,10 +47,11 @@ GitHub Actions (`.github/workflows/ci.yml`) на кожен push у `main`, pull
 
 1. **quality** (Node 22 і 24): `npm ci` → ESLint → Prettier → typecheck → Vitest → build (артефакт `apps/web/dist`)
 2. **e2e** (після quality): Playwright Chromium з кешем браузера → звіт `playwright-report` (артефакт), трейси при падінні
-3. **server** — тести сервера з PostgreSQL і Redis + E2E проти self-hosted збірки
-4. **docker** — збірка образу, `docker compose up --wait`, смоук-тест API
-5. **deploy** (лише `main`, після всього вище): збірка з `BASE_PATH=/<repo>/` → GitHub Pages
-6. **live** (після deploy): Playwright проти задеплоєного сайту і **справжнього** Cloudflare — CORS, base path, CSP, повний тест
+3. **lighthouse** (після quality): Lighthouse CI на тій самій збірці — головна сторінка й сторінка конфіденційності, мобільний профіль, медіана з 3 прогонів. Пороги в `lighthouserc.json`: performance ≥ 90, accessibility = 100, best practices ≥ 95, SEO ≥ 90, LCP ≤ 2,5 с, CLS ≤ 0,05, TBT ≤ 200 мс, JS ≤ 40 KB. HTML-звіти — артефакт `lighthouse-report`. Локально: `npm run build && npm run lighthouse` (потрібен Chrome; інший браузер — через `CHROME_PATH`)
+4. **server** — тести сервера з PostgreSQL і Redis + E2E проти self-hosted збірки
+5. **docker** — збірка образу, `docker compose up --wait`, смоук-тест API
+6. **deploy** (лише `main`, після всього вище): збірка з `BASE_PATH=/<repo>/` → GitHub Pages
+7. **live** (після deploy): Playwright проти задеплоєного сайту і **справжнього** Cloudflare — CORS, base path, CSP, повний тест
 
 Dependabot щотижня оновлює npm-залежності (dev-інструменти одним PR) і щомісяця — версії GitHub Actions.
 
