@@ -180,5 +180,11 @@ export default {
   'analytics.slot': '{day} {from}:00–{to}:00 ({value} Mbps)',
   'analytics.insight': 'Fastest: {best}. Slowest: {worst}.',
   'analytics.noData': 'no data',
+  'analytics.demo.badge': 'Demo',
+  'analytics.demo.on':
+    'There are only {count} real tests so far, so this is a made-up example of how analytics will look with data. Providers and numbers are not real.',
+  'analytics.demo.off': 'There are only {count} real tests so far. You can preview how analytics will look with data.',
+  'analytics.demo.showReal': 'Show real data',
+  'analytics.demo.showDemo': 'Show example',
   'analytics.loadError': 'Could not load analytics: {message}',
 };

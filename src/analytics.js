@@ -10,6 +10,7 @@ import { StorageManager } from './services/StorageManager.js';
 import { formatMbps, formatMs } from './ui/format.js';
 import { t, setLang, getLang, detectLang, applyDom, getLocale } from './i18n/index.js';
 import { heatBins, binOf, bestAndWorst } from './core/heatmap.js';
+import { DEMO_THRESHOLD, demoStats, demoProviders, demoCities, demoHeatmap } from './core/demoData.js';
 
 const $ = (sel) => /** @type {HTMLElement} */ (document.querySelector(sel));
 const storage = new StorageManager();
@@ -30,6 +31,14 @@ const filters = {
 /** @type {{ stats?: any, providers?: any[], cities?: any[], heatmap?: any[] }} */
 let data = {};
 
+/**
+ * Демо-режим: поки справжніх тестів менше за DEMO_THRESHOLD, сторінка показує вигаданий приклад
+ * (з помітним банером). Користувач може перемкнутися на справжні дані й назад.
+ * @type {{ realCount: number, choice: 'auto' | 'demo' | 'real' }}
+ */
+const demo = { realCount: 0, choice: 'auto' };
+const isDemo = () => demo.choice === 'demo' || (demo.choice === 'auto' && demo.realCount < DEMO_THRESHOLD);
+
 async function api(path, params) {
   const url = new URL(`api/${path}`, document.baseURI);
   for (const [k, v] of Object.entries(params)) if (v) url.searchParams.set(k, String(v));
@@ -45,12 +54,20 @@ async function loadAll() {
   try {
     const days = filters.days();
     const city = filters.city();
-    const [stats, providers, cities] = await Promise.all([
-      api('results/stats', { days }),
-      api('analytics/providers', { days, city }),
-      api('analytics/cities', { days }),
-    ]);
-    data = { ...data, stats, providers, cities };
+    // Справжня кількість тестів потрібна завжди — від неї залежить, чи показувати демо
+    const stats = await api('results/stats', { days });
+    demo.realCount = stats.count ?? 0;
+    if (isDemo()) {
+      const d = Number(days);
+      data = { ...data, stats: demoStats(d), providers: demoProviders(d, city), cities: demoCities(d) };
+    } else {
+      const [providers, cities] = await Promise.all([
+        api('analytics/providers', { days, city }),
+        api('analytics/cities', { days }),
+      ]);
+      data = { ...data, stats, providers, cities };
+    }
+    renderDemoBanner();
     renderCities();
     renderKpis();
     renderProviders();
@@ -64,13 +81,21 @@ async function loadAll() {
 }
 
 async function loadHeatmap() {
-  data.heatmap = await api('analytics/heatmap', {
-    days: filters.days(),
-    city: filters.city(),
-    isp: filters.isp(),
-    tz,
-  });
+  data.heatmap = isDemo()
+    ? demoHeatmap(Number(filters.days()), { city: filters.city(), isp: filters.isp() })
+    : await api('analytics/heatmap', { days: filters.days(), city: filters.city(), isp: filters.isp(), tz });
   renderHeatmap();
+}
+
+function renderDemoBanner() {
+  const on = isDemo();
+  const banner = $('#demo-banner');
+  // Банер видно в демо-режимі і тоді, коли справжніх даних мало, а користувач перемкнувся на них
+  banner.hidden = !on && demo.realCount >= DEMO_THRESHOLD;
+  banner.classList.toggle('is-demo', on);
+  $('#demo-banner .demo-banner__badge').hidden = !on;
+  $('#demo-text').textContent = t(on ? 'analytics.demo.on' : 'analytics.demo.off', { count: demo.realCount });
+  $('#demo-toggle').textContent = t(on ? 'analytics.demo.showReal' : 'analytics.demo.showDemo');
 }
 
 // ───────────── Рендер ─────────────
@@ -285,6 +310,7 @@ function applyLanguage(lang) {
   document.title = t('analytics.pageTitle');
   applyDom(document);
   if (data.stats) {
+    renderDemoBanner();
     renderCities();
     renderKpis();
     renderProviders();
@@ -306,6 +332,10 @@ function init() {
     const next = getLang() === 'uk' ? 'en' : 'uk';
     settings = storage.saveSettings({ lang: next });
     applyLanguage(next);
+  });
+  $('#demo-toggle').addEventListener('click', () => {
+    demo.choice = isDemo() ? 'real' : 'demo';
+    loadAll();
   });
   $('#f-days').addEventListener('change', loadAll);
   $('#f-city').addEventListener('change', loadAll);

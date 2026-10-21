@@ -30,6 +30,17 @@ test('аналітика: рейтинг, фільтр за містом, теп
   await page.getByRole('link', { name: 'Аналітика' }).click();
   await expect(page).toHaveURL(/analytics\.html$/);
   await expect(page.getByRole('heading', { name: 'Аналітика', level: 1 })).toBeVisible();
+  await expect(page.locator('#kpi-count')).not.toHaveText('—');
+
+  // Поки справжніх тестів мало, сторінка показує демо-приклад із помітним банером
+  const toReal = page.getByRole('button', { name: 'Показати справжні' });
+  if (await toReal.isVisible()) {
+    await expect(page.locator('#demo-banner')).toContainText('Демо');
+    await expect(page.locator('#providers-body')).toContainText('FiberOne');
+    await expect(page.locator('.heatmap__cell[data-tip]')).toHaveCount(7 * 24);
+    await toReal.click();
+    await expect(page.getByRole('button', { name: 'Показати приклад' })).toBeVisible();
+  }
 
   // Фільтр за містом із засіяних даних
   await page.getByLabel('Місто').selectOption(CITY);

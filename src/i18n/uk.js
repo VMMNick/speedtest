@@ -182,5 +182,11 @@ export default {
   'analytics.slot': '{day} {from}:00–{to}:00 ({value} Мбіт/с)',
   'analytics.insight': 'Найшвидше: {best}. Найповільніше: {worst}.',
   'analytics.noData': 'немає даних',
+  'analytics.demo.badge': 'Демо',
+  'analytics.demo.on':
+    'Справжніх тестів поки {count}, тому показано вигаданий приклад — так аналітика виглядатиме з даними. Провайдери й числа не справжні.',
+  'analytics.demo.off': 'Справжніх тестів поки {count}. Можна подивитися, як аналітика виглядатиме з даними.',
+  'analytics.demo.showReal': 'Показати справжні',
+  'analytics.demo.showDemo': 'Показати приклад',
   'analytics.loadError': 'Не вдалося завантажити аналітику: {message}',
 };

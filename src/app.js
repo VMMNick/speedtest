@@ -111,8 +111,10 @@ function bindEvents() {
   // Згода на анонімну статистику — лише коли збірка має бекенд
   const consent = /** @type {HTMLInputElement} */ (byId('stats-consent'));
   byId('stats-optin').hidden = !FEATURES.resultsApi;
-  // Аналітика є лише там, де є бекенд зі статистикою
-  byId('link-analytics').hidden = !FEATURES.resultsApi;
+  // Аналітика: своя сторінка, якщо є бекенд, інакше — зовнішня (напр. GitHub Pages → Render)
+  const analytics = /** @type {HTMLAnchorElement} */ (byId('link-analytics'));
+  if (!FEATURES.resultsApi && FEATURES.analyticsUrl) analytics.href = FEATURES.analyticsUrl;
+  analytics.hidden = !FEATURES.resultsApi && !FEATURES.analyticsUrl;
   consent.checked = settings.shareStats !== false;
   consent.addEventListener('change', () => (settings = storage.saveSettings({ shareStats: consent.checked })));
 

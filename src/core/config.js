@@ -22,6 +22,8 @@ export const SELF_SERVER = {
 export const FEATURES = Object.freeze({
   selfServer: import.meta.env.VITE_SELF_SERVER === 'true',
   resultsApi: import.meta.env.VITE_RESULTS_API === 'true',
+  // Збірка без бекенду (GitHub Pages) може вести на аналітику, розгорнуту деінде (Render)
+  analyticsUrl: /** @type {string} */ (import.meta.env.VITE_ANALYTICS_URL || ''),
 });
 
 /** Перелік серверів-кандидатів. ServerSelector обирає найшвидший за пінгом. */
