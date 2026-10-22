@@ -16,6 +16,7 @@ export const TAGS = /** @type {const} */ ({
   measure: 'measurement',
   results: 'results',
   analytics: 'analytics',
+  status: 'status',
   service: 'service',
 });
 
@@ -54,6 +55,7 @@ export const openapiInfo = {
     { name: TAGS.measure, description: 'Вимірювання до власного сервера (режим selfhosted)' },
     { name: TAGS.results, description: 'Анонімні результати тестів' },
     { name: TAGS.analytics, description: 'Агрегована аналітика (кеш у Redis на 60 с, заголовок X-Cache)' },
+    { name: TAGS.status, description: 'Стан провайдерів «зараз проти звичайного» й інциденти (фонова задача BullMQ)' },
     { name: TAGS.service, description: 'Службові ендпоінти' },
   ],
   components: {

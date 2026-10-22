@@ -1135,6 +1135,241 @@
         }
       }
     },
+    "/api/status/providers": {
+      "get": {
+        "operationId": "getProviderStatus",
+        "summary": "Стан провайдерів зараз",
+        "tags": [
+          "status"
+        ],
+        "description": "Медіани за останні 3 год порівнюються з попередніми 14 днями. `degraded` — download упав нижче 50% звичайного або пінг зріс більш ніж у 2 рази; `unknown` — замало свіжих тестів. Оновлюється фоновою задачею BullMQ.",
+        "responses": {
+          "200": {
+            "description": "Знімок останньої перевірки",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Знімок останньої перевірки",
+                  "type": "object",
+                  "properties": {
+                    "checkedAt": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "format": "date-time"
+                    },
+                    "recentHours": {
+                      "type": "integer"
+                    },
+                    "baselineDays": {
+                      "type": "integer"
+                    },
+                    "providers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "isp": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ok",
+                              "degraded",
+                              "unknown"
+                            ]
+                          },
+                          "since": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Відколи триває цей стан"
+                          },
+                          "reasons": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "download",
+                                "ping"
+                              ]
+                            },
+                            "description": "Що саме погіршилось"
+                          },
+                          "recentDownload": {
+                            "type": [
+                              "null",
+                              "number"
+                            ],
+                            "description": "Мбіт/с"
+                          },
+                          "baselineDownload": {
+                            "type": [
+                              "null",
+                              "number"
+                            ],
+                            "description": "Мбіт/с"
+                          },
+                          "recentPing": {
+                            "type": [
+                              "null",
+                              "number"
+                            ],
+                            "description": "мс"
+                          },
+                          "baselinePing": {
+                            "type": [
+                              "null",
+                              "number"
+                            ],
+                            "description": "мс"
+                          },
+                          "recentSamples": {
+                            "type": "integer"
+                          },
+                          "baselineSamples": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/status/incidents": {
+      "get": {
+        "operationId": "getIncidents",
+        "summary": "Інциденти провайдерів",
+        "tags": [
+          "status"
+        ],
+        "description": "Інциденти, що почалися за останні N днів, і ті, що тривають. Щонайбільше 50.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "default": 30
+            },
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "description": "Період, днів"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Від найновішого",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Від найновішого",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "isp": {
+                        "type": "string"
+                      },
+                      "startedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "endedAt": {
+                        "type": [
+                          "null",
+                          "string"
+                        ],
+                        "format": "date-time",
+                        "description": "null — триває"
+                      },
+                      "reasons": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "download",
+                            "ping"
+                          ]
+                        },
+                        "description": "Що саме погіршилось"
+                      },
+                      "recentDownload": {
+                        "type": [
+                          "null",
+                          "number"
+                        ],
+                        "description": "Мбіт/с"
+                      },
+                      "baselineDownload": {
+                        "type": [
+                          "null",
+                          "number"
+                        ],
+                        "description": "Мбіт/с"
+                      },
+                      "recentPing": {
+                        "type": [
+                          "null",
+                          "number"
+                        ],
+                        "description": "мс"
+                      },
+                      "baselinePing": {
+                        "type": [
+                          "null",
+                          "number"
+                        ],
+                        "description": "мс"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Параметри не відповідають схемі",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Параметри не відповідають схемі",
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Причина відмови токена (лише для 403)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "getHealth",
@@ -1239,6 +1474,10 @@
     {
       "name": "analytics",
       "description": "Агрегована аналітика (кеш у Redis на 60 с, заголовок X-Cache)"
+    },
+    {
+      "name": "status",
+      "description": "Стан провайдерів «зараз проти звичайного» й інциденти (фонова задача BullMQ)"
     },
     {
       "name": "service",

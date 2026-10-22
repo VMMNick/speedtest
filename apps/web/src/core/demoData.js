@@ -104,3 +104,80 @@ export function demoHeatmap(days = 30, { city = '', isp = '' } = {}) {
   });
   return cells;
 }
+
+const MIN = 60_000;
+
+/**
+ * Як GET /api/status/providers: SkyLink Mobile зараз повільніший за звичайне, RadioWave — замало свіжих тестів.
+ * @param {number} [now] мс
+ */
+export function demoStatus(now = Date.now()) {
+  const at = (minAgo) => new Date(now - minAgo * MIN).toISOString();
+  const providers = ISPS.map((p, i) => {
+    const degraded = p.isp === 'SkyLink Mobile';
+    const unknown = p.isp === 'RadioWave';
+    const recentDownload = degraded ? round1(p.down * 0.38) : round1(p.down * (0.94 + noise(p.isp) * 0.1));
+    return {
+      isp: p.isp,
+      status: degraded ? 'degraded' : unknown ? 'unknown' : 'ok',
+      since: at(degraded ? 47 : 60 * 24 * (3 + i)),
+      reasons: degraded ? ['download'] : [],
+      recentDownload: unknown ? null : recentDownload,
+      baselineDownload: p.down,
+      recentPing: unknown ? null : round1(p.ping * (degraded ? 1.3 : 1)),
+      baselinePing: p.ping,
+      recentSamples: unknown ? 2 : Math.round(40 * p.share),
+      baselineSamples: tests(14, p.share),
+    };
+  });
+  const order = { degraded: 0, ok: 1, unknown: 2 };
+  providers.sort((a, b) => order[a.status] - order[b.status] || b.recentSamples - a.recentSamples);
+  return { checkedAt: at(3), recentHours: 3, baselineDays: 14, providers };
+}
+
+/**
+ * Як GET /api/status/incidents: один триває, два вже минули.
+ * @param {number} [now] мс
+ */
+export function demoIncidents(now = Date.now()) {
+  const at = (minAgo) => new Date(now - minAgo * MIN).toISOString();
+  const isp = (name) => ISPS.find((p) => p.isp === name);
+  const sky = isp('SkyLink Mobile');
+  const home = isp('HomeLAN');
+  const city = isp('CityNet');
+  return [
+    {
+      id: 3,
+      isp: sky.isp,
+      startedAt: at(47),
+      endedAt: null,
+      reasons: ['download'],
+      recentDownload: round1(sky.down * 0.38),
+      baselineDownload: sky.down,
+      recentPing: round1(sky.ping * 1.3),
+      baselinePing: sky.ping,
+    },
+    {
+      id: 2,
+      isp: home.isp,
+      startedAt: at(60 * 26),
+      endedAt: at(60 * 23 + 30),
+      reasons: ['download'],
+      recentDownload: round1(home.down * 0.42),
+      baselineDownload: home.down,
+      recentPing: home.ping,
+      baselinePing: home.ping,
+    },
+    {
+      id: 1,
+      isp: city.isp,
+      startedAt: at(60 * 24 * 4 + 120),
+      endedAt: at(60 * 24 * 4 + 20),
+      reasons: ['ping'],
+      recentDownload: city.down,
+      baselineDownload: city.down,
+      recentPing: 58.4,
+      baselinePing: city.ping,
+    },
+  ];
+}

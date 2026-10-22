@@ -10,7 +10,15 @@ import { StorageManager } from './services/StorageManager.js';
 import { formatMbps, formatMs } from './ui/format.js';
 import { t, setLang, loadLang, getLang, detectLang, applyDom, getLocale } from './i18n/index.js';
 import { heatBins, binOf, bestAndWorst } from './core/heatmap.js';
-import { DEMO_THRESHOLD, demoStats, demoProviders, demoCities, demoHeatmap } from './core/demoData.js';
+import {
+  DEMO_THRESHOLD,
+  demoStats,
+  demoProviders,
+  demoCities,
+  demoHeatmap,
+  demoStatus,
+  demoIncidents,
+} from './core/demoData.js';
 
 const $ = (sel) => /** @type {HTMLElement} */ (document.querySelector(sel));
 const storage = new StorageManager();
@@ -28,7 +36,7 @@ const filters = {
   isp: () => /** @type {HTMLSelectElement} */ ($('#f-isp')).value,
 };
 
-/** @type {{ stats?: any, providers?: any[], cities?: any[], heatmap?: any[] }} */
+/** @type {{ stats?: any, providers?: any[], cities?: any[], heatmap?: any[], status?: any, incidents?: any[] }} */
 let data = {};
 
 /**
@@ -72,7 +80,7 @@ async function loadAll() {
     renderKpis();
     renderProviders();
     renderIspFilter();
-    await loadHeatmap();
+    await Promise.all([loadHeatmap(), loadStatus()]);
   } catch (e) {
     toast(t('analytics.loadError', { message: e.message }));
   } finally {
@@ -85,6 +93,26 @@ async function loadHeatmap() {
     ? demoHeatmap(Number(filters.days()), { city: filters.city(), isp: filters.isp() })
     : await api('analytics/heatmap', { days: filters.days(), city: filters.city(), isp: filters.isp(), tz });
   renderHeatmap();
+}
+
+/** Стан провайдерів не залежить від фільтрів: це «зараз», а не період */
+async function loadStatus() {
+  if (isDemo()) {
+    data.status = demoStatus();
+    data.incidents = demoIncidents();
+  } else {
+    try {
+      [data.status, data.incidents] = await Promise.all([
+        api('status/providers', {}),
+        api('status/incidents', { days: 30 }),
+      ]);
+    } catch {
+      // Старіший сервер без /api/status — просто ховаємо секцію
+      data.status = null;
+      data.incidents = [];
+    }
+  }
+  renderStatus();
 }
 
 function renderDemoBanner() {
@@ -181,6 +209,78 @@ function renderProviders() {
         cell(String(r.samples)),
       );
       return tr;
+    }),
+  );
+}
+
+const fmtTime = (iso) => new Date(iso).toLocaleTimeString(getLocale(), { hour: '2-digit', minute: '2-digit' });
+const fmtDateTime = (iso) =>
+  new Date(iso).toLocaleString(getLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+/** Сьогодні — лише час, інакше дата й час */
+const fmtWhen = (iso) => (new Date(iso).toDateString() === new Date().toDateString() ? fmtTime(iso) : fmtDateTime(iso));
+
+/** «60 замість 295 Мбіт/с» / «58 замість 12 мс» — що саме погіршилось */
+function degradation(p, reasons) {
+  const parts = [];
+  if (reasons.includes('download')) {
+    parts.push(
+      t('analytics.status.down', { now: formatMbps(p.recentDownload), usual: formatMbps(p.baselineDownload) }),
+    );
+  }
+  if (reasons.includes('ping')) {
+    parts.push(t('analytics.status.ping', { now: formatMs(p.recentPing), usual: formatMs(p.baselinePing) }));
+  }
+  return parts.join(' · ');
+}
+
+function renderStatus() {
+  const section = $('#status-section');
+  const s = data.status;
+  section.hidden = !s;
+  if (!s) return;
+  $('#status-note').textContent = s.checkedAt
+    ? t('analytics.status.note', { hours: s.recentHours, days: s.baselineDays, time: fmtWhen(s.checkedAt) })
+    : '';
+  $('#status-empty').hidden = s.providers.length > 0;
+  $('#status-list').replaceChildren(
+    ...s.providers.map((p) => {
+      const li = document.createElement('li');
+      li.className = `status status--${p.status}`;
+      const name = Object.assign(document.createElement('span'), { className: 'status__isp', textContent: p.isp });
+      const badge = Object.assign(document.createElement('span'), {
+        className: 'status__badge',
+        textContent: t(`analytics.status.${p.status}`),
+      });
+      const detail =
+        p.status === 'degraded'
+          ? `${degradation(p, p.reasons)} · ${t('analytics.status.since', { time: fmtWhen(p.since) })}`
+          : p.status === 'ok'
+            ? `${formatMbps(p.recentDownload)} ${t('unit.mbps')} · ${formatMs(p.recentPing)} ${t('unit.ms')}`
+            : t('analytics.status.fewTests');
+      const info = Object.assign(document.createElement('span'), { className: 'status__detail', textContent: detail });
+      li.append(badge, name, info);
+      return li;
+    }),
+  );
+
+  const incidents = data.incidents ?? [];
+  $('#incidents-empty').hidden = incidents.length > 0;
+  $('#incidents-list').replaceChildren(
+    ...incidents.map((i) => {
+      const li = document.createElement('li');
+      li.className = `incident${i.endedAt ? '' : ' is-ongoing'}`;
+      const when = i.endedAt
+        ? `${fmtDateTime(i.startedAt)} – ${fmtWhen(i.endedAt)}`
+        : `${t('analytics.incidents.ongoing')} · ${t('analytics.status.since', { time: fmtWhen(i.startedAt) })}`;
+      li.append(
+        Object.assign(document.createElement('strong'), { textContent: i.isp }),
+        Object.assign(document.createElement('span'), { className: 'incident__when', textContent: when }),
+        Object.assign(document.createElement('span'), {
+          className: 'incident__what',
+          textContent: degradation(i, i.reasons),
+        }),
+      );
+      return li;
     }),
   );
 }
@@ -316,6 +416,7 @@ function applyLanguage(lang) {
     renderProviders();
     renderIspFilter();
     renderHeatmap();
+    renderStatus();
   }
 }
 

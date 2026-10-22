@@ -9,6 +9,7 @@ import fastifyStatic from '@fastify/static';
 import speedRoutes from './routes/speed.js';
 import resultsRoutes from './routes/results.js';
 import analyticsRoutes from './routes/analytics.js';
+import statusRoutes from './routes/status.js';
 import { randomBytes } from 'node:crypto';
 import { memoryRepository } from './db.js';
 import { createTokenService } from './tokens.js';
@@ -69,6 +70,7 @@ export async function buildApp({ config, repo = memoryRepository(), redis = unde
     tokensPerMinute,
   });
   await app.register(analyticsRoutes, { repo, redis });
+  await app.register(statusRoutes, { repo });
 
   const component = { type: 'string', enum: ['ok', 'error', 'disabled'] };
   const healthSchema = {

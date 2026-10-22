@@ -30,6 +30,9 @@ services:
       # Підпис токенів результатів (захист аналітики від підкинутих результатів); Render згенерує сам
       - key: RESULTS_TOKEN_SECRET
         generateValue: true
+      # Фонові задачі (стан провайдерів, очищення) — у процесі веб-сервісу: окремий воркер на Render платний
+      - key: JOBS_INLINE
+        value: 'true'
       - key: DATABASE_URL
         fromDatabase:
           name: speedtest-db
@@ -44,8 +47,8 @@ services:
     name: speedtest-redis
     plan: free
     region: frankfurt
-    # Лише лічильники rate limit і кеш аналітики — старе можна викидати
-    maxmemoryPolicy: allkeys-lru
+    # Черга BullMQ (фонові задачі) не повинна витіснятися; решта ключів (rate limit, кеш) мають TTL
+    maxmemoryPolicy: noeviction
     # Порожній список = доступ лише з приватної мережі Render
     ipAllowList: []
 

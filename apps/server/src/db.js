@@ -4,6 +4,10 @@
 import pg from 'pg';
 import { readdir, readFile } from 'node:fs/promises';
 import { resolveTimeZone } from './timezones.js';
+import { percentileCont } from './percentile.js';
+import { pgStatusStore, memoryStatusStore } from './status-store.js';
+
+export { percentileCont };
 
 const MIGRATIONS_DIR = new URL('../migrations/', import.meta.url);
 /** Довільне число для pg_advisory_lock: кілька інстансів не запустять міграції одночасно */
@@ -179,6 +183,9 @@ export function pgRepository(pool) {
     async ping() {
       await pool.query('SELECT 1');
     },
+
+    // Стан провайдерів та інциденти (див. status-store.js)
+    ...pgStatusStore(pool),
   };
 }
 
@@ -289,22 +296,14 @@ export function memoryRepository() {
         .sort((a, b) => a.dow - b.dow || a.hour - b.hour);
     },
     async ping() {},
+
+    ...memoryStatusStore(rows),
   };
 }
 
 // ───────── допоміжне для репозиторію в пам'яті (поведінка = SQL) ─────────
 
 const round1 = (x) => Math.round(x * 10) / 10;
-
-/** Як percentile_cont у PostgreSQL: лінійна інтерполяція між сусідніми значеннями */
-export function percentileCont(values, p) {
-  if (!values.length) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const idx = (sorted.length - 1) * p;
-  const lo = Math.floor(idx);
-  const hi = Math.ceil(idx);
-  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
-}
 
 function groupBy(list, keyFn) {
   const map = new Map();

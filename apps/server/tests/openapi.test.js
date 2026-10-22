@@ -33,6 +33,8 @@ describe('OpenAPI', () => {
       '/api/results',
       '/api/results/stats',
       '/api/results/token',
+      '/api/status/incidents',
+      '/api/status/providers',
       '/api/upload',
     ]);
   });

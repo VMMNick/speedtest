@@ -26,7 +26,9 @@ speedtest/
 │   │   ├── vite.config.js · jsconfig.json · .env.cloud · .env.selfhosted · .env.production
 │   │   └── package.json
 │   └── server/                   @speedtest/server — Fastify API
-│       ├── src/               app · config · db · cache · tokens · timezones · routes/{speed,results,analytics}
+│       ├── src/               app · config · db · cache · tokens · timezones · openapi
+│       │                      status (правила стану) · status-store (SQL і пам'ять) · jobs (BullMQ) · worker
+│       │                      routes/{speed,results,analytics,status}
 │       ├── migrations/        SQL-міграції (застосовуються при старті)
 │       ├── tests/             юніт, інтеграційні (PostgreSQL/Redis), токени, контрактний тест
 │       └── package.json
@@ -35,7 +37,7 @@ speedtest/
 ├── e2e/                          Playwright: web/ · server/ · cloud/ · live/ + конфіг на кожен режим
 ├── docs/                         документація й медіа для README
 ├── scripts/                      бюджет розміру, скріншоти, схема архітектури, іконки
-├── .github/workflows/            ci.yml · backup.yml
+├── .github/workflows/            ci.yml · backup.yml · visual-baselines.yml
 ├── Dockerfile · docker-compose.yml · render.yaml
 └── package.json                  workspaces + скрипти для всього репозиторію
 ```

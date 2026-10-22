@@ -283,3 +283,96 @@ body.is-loading main {
 .demo-banner__btn {
   flex: none;
 }
+
+/* ───────────── Стан провайдерів ───────────── */
+
+.status-list,
+.incidents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.status {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'badge isp' 'badge detail';
+  column-gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+.status__badge {
+  grid-area: badge;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 112px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+/* Колір дублюється текстом бейджа — не лише кольором (WCAG 1.4.1) */
+.status__badge::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.status--ok .status__badge {
+  color: var(--color-success-text);
+}
+.status--degraded .status__badge {
+  color: var(--color-danger-text);
+}
+.status--unknown .status__badge {
+  color: var(--color-text-muted);
+}
+.status--degraded {
+  box-shadow: inset 3px 0 0 var(--color-danger);
+}
+.status__isp {
+  grid-area: isp;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status__detail {
+  grid-area: detail;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.incidents__title {
+  margin: 18px 0 8px;
+  font-size: 0.95rem;
+}
+.incident {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  font-size: 0.9rem;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.incident:last-child {
+  border-bottom: 0;
+}
+.incident__when,
+.incident__what {
+  color: var(--color-text-muted);
+}
+.incident.is-ongoing .incident__when {
+  color: var(--color-danger-text);
+  font-weight: 600;
+}
+@media (max-width: 480px) {
+  .status__badge {
+    min-width: 96px;
+  }
+}

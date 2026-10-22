@@ -1,6 +1,6 @@
 # Локальний запуск усього стеку:
 #   docker compose up -d --build     → http://localhost:8080
-#   docker compose logs -f app
+#   docker compose logs -f app worker
 #   docker compose down               (дані БД лишаються у volume pgdata18)
 name: speedtest
 
@@ -18,10 +18,30 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-false}
       # Порожньо — випадковий секрет на кожен запуск (див. .env.example)
       RESULTS_TOKEN_SECRET: ${RESULTS_TOKEN_SECRET:-}
+      # Фонові задачі виконує окремий сервіс worker
+      JOBS_INLINE: 'false'
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Фонові задачі BullMQ: стан провайдерів кожні 10 хв, очищення старих результатів раз на добу.
+  # Той самий образ, інша команда; можна масштабувати незалежно від API.
+  worker:
+    build: .
+    image: speedtest:latest
+    command: ['node', 'apps/server/src/worker.js']
+    environment:
+      DATABASE_URL: postgres://speedtest:${POSTGRES_PASSWORD:-speedtest}@db:5432/speedtest
+      REDIS_URL: redis://redis:6379
+      STATUS_CHECK_EVERY_MIN: ${STATUS_CHECK_EVERY_MIN:-10}
+    # Без власного HTTP — healthcheck образу (/api/health) тут не має сенсу
+    healthcheck:
+      disable: true
+    depends_on:
+      app:
         condition: service_healthy
     restart: unless-stopped
 
@@ -43,8 +63,9 @@ services:
 
   redis:
     image: redis:8-alpine
-    # Лише лічильники rate limit — зберігати на диск не потрібно
-    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    # Rate limit, кеш аналітики, токени й черга BullMQ. Розклад задач відновлюється на старті,
+    # тож зберігати на диск не потрібно. noeviction — вимога BullMQ (ключі черги не можна витісняти).
+    command: ['redis-server', '--save', '', '--appendonly', 'no', '--maxmemory-policy', 'noeviction']
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s

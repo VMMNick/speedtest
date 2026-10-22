@@ -10,6 +10,7 @@ import { createPool, migrate, pgRepository, memoryRepository } from '../src/db.j
 import { seed, TEST_ENV, postResult } from './fixtures.js';
 
 const DB = process.env.TEST_DATABASE_URL;
+const MIGRATIONS = ['001_results.sql', '002_provider_status.sql'];
 const REDIS = process.env.TEST_REDIS_URL;
 
 const result = {
@@ -30,19 +31,19 @@ describe.skipIf(!DB)('PostgreSQL', () => {
   let pool;
   beforeAll(async () => {
     pool = createPool(DB);
-    await pool.query('DROP TABLE IF EXISTS results, schema_migrations');
+    await pool.query('DROP TABLE IF EXISTS results, provider_status, provider_incidents, schema_migrations');
   });
   afterAll(() => pool.end());
 
   it('міграції застосовуються один раз (ідемпотентно)', async () => {
-    expect(await migrate(pool, {})).toEqual(['001_results.sql']);
+    expect(await migrate(pool, {})).toEqual(MIGRATIONS);
     expect(await migrate(pool, {})).toEqual([]);
   });
 
   it('паралельний запуск міграцій не ламається (advisory lock)', async () => {
-    await pool.query('DROP TABLE IF EXISTS results, schema_migrations');
+    await pool.query('DROP TABLE IF EXISTS results, provider_status, provider_incidents, schema_migrations');
     const runs = await Promise.all([migrate(pool, {}), migrate(pool, {}), migrate(pool, {})]);
-    expect(runs.flat()).toEqual(['001_results.sql']);
+    expect(runs.flat()).toEqual(MIGRATIONS);
   });
 
   it('insert + stats через HTTP', async () => {

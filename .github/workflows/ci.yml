@@ -269,6 +269,14 @@ jobs:
           curl -fsS -X POST http://localhost:8080/api/results -H 'content-type: application/json' \
             -H "x-result-token: $token" -d "$body"
           curl -fsS http://localhost:8080/api/results/stats | grep -q '"count":1'
+          # Фонові задачі: воркер запущений, розклад BullMQ створено, API стану відповідає
+          test "$(docker compose ps worker --format '{{.State}}')" = running
+          for i in $(seq 1 15); do
+            docker compose exec -T redis redis-cli --scan --pattern 'speedtest:bull:speedtest-jobs:repeat:*' | grep -q provider-status && break
+            sleep 1
+          done
+          docker compose exec -T redis redis-cli --scan --pattern 'speedtest:bull:speedtest-jobs:repeat:*' | grep -q provider-status
+          curl -fsS http://localhost:8080/api/status/providers | grep -q '"providers"'
           test "$(docker inspect -f '{{.Config.User}}' speedtest:latest)" = node
 
       - name: Build the cloud image (as Render does)

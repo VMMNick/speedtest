@@ -28,6 +28,7 @@ Ping · jitter · loss · download · upload · bufferbloat · connection stabil
 - **Bufferbloat.** Ping is also measured _under load_ — what you feel in games and video calls, and what ordinary speed tests do not show.
 - **No UI freezes, even on gigabit.** The whole engine runs in a Web Worker; Chart.js (~¾ of all JS) loads only when needed — initial JS is ~18 KB gzip, and the English dictionary loads only when needed.
 - **Full stack.** An optional Fastify + PostgreSQL + Redis backend: anonymous statistics, a provider ranking and a "when is the internet fastest" heatmap with k-anonymity and cached aggregations.
+- **Background jobs on BullMQ.** Every 10 minutes a worker compares each provider's speed "now" with its usual two weeks, flags degradation and keeps an incident log; once a day it prunes old results.
 - **Production hygiene.** Strict CSP without `unsafe-inline`, a PWA with a hand-written service worker, two languages switched live, WCAG 2.1 AA (axe), ~200 tests, CI with 8 jobs: Lighthouse thresholds and visual regression tests on every PR, a daily database backup.
 
 ## Screenshots
@@ -70,7 +71,7 @@ Ping · jitter · loss · download · upload · bufferbloat · connection stabil
 | Layer          | Stack                                                                                                          |
 | -------------- | -------------------------------------------------------------------------------------------------------------- |
 | Frontend       | Vanilla JS (ES modules, JSDoc + `checkJs`), Web Workers, Chart.js, Vite, custom CSP and service worker plugins |
-| Backend        | Node.js 22, Fastify 5, PostgreSQL 18 (Neon), Redis, JSON Schema, OpenAPI 3.1 / Swagger UI                      |
+| Backend        | Node.js 22, Fastify 5, PostgreSQL 18 (Neon), Redis, BullMQ, JSON Schema, OpenAPI 3.1 / Swagger UI              |
 | Quality        | Vitest, Playwright (E2E + axe), ESLint, Prettier, TypeScript checking of JS                                    |
 | Infrastructure | Docker (multi-stage, non-root), GitHub Actions, GitHub Pages, Render, Dependabot                               |
 

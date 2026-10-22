@@ -42,9 +42,17 @@ test('аналітика: рейтинг, фільтр за містом, теп
     await expect(page.locator('#demo-banner')).toContainText('Демо');
     await expect(page.locator('#providers-body')).toContainText('FiberOne');
     await expect(page.locator('.heatmap__cell[data-tip]')).toHaveCount(7 * 24);
+    // Стан провайдерів у демо: один повільніший за звичайне, інцидент триває
+    await expect(page.locator('#status-list .status--degraded')).toContainText('SkyLink Mobile');
+    await expect(page.locator('#status-list .status--degraded')).toContainText('Повільніше');
+    await expect(page.locator('#incidents-list .is-ongoing')).toHaveCount(1);
     await toReal.click();
     await expect(page.getByRole('button', { name: 'Показати приклад' })).toBeVisible();
   }
+
+  // Справжній стан провайдерів: секція є (дані з фонової задачі BullMQ або «перевірок ще не було»)
+  await expect(page.locator('#status-section')).toBeVisible();
+  await expect(page.locator('#status-list .status--degraded')).toHaveCount(0);
 
   // Фільтр за містом із засіяних даних
   await page.getByLabel('Місто').selectOption(CITY);

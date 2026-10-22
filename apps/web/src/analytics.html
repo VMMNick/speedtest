@@ -97,6 +97,20 @@
         </div>
       </section>
 
+      <section class="card" aria-labelledby="status-title" id="status-section">
+        <header class="card__head">
+          <h2 id="status-title" data-i18n="analytics.status.title">Стан провайдерів зараз</h2>
+          <span class="label" id="status-note"></span>
+        </header>
+        <ul class="status-list" id="status-list"></ul>
+        <p class="empty" id="status-empty" hidden data-i18n="analytics.status.empty">
+          Перевірок ще не було — фонова задача запускається кожні 10 хвилин.
+        </p>
+        <h3 class="incidents__title" data-i18n="analytics.incidents.title">Інциденти за 30 днів</h3>
+        <ul class="incidents" id="incidents-list"></ul>
+        <p class="empty" id="incidents-empty" hidden data-i18n="analytics.incidents.empty">Інцидентів не було.</p>
+      </section>
+
       <section class="card" aria-labelledby="providers-title">
         <header class="card__head">
           <h2 id="providers-title" data-i18n="analytics.providers">Рейтинг провайдерів</h2>

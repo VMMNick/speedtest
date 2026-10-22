@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { DEMO_THRESHOLD, demoStats, demoProviders, demoCities, demoHeatmap } from '../../src/core/demoData.js';
+import {
+  DEMO_THRESHOLD,
+  demoStats,
+  demoProviders,
+  demoCities,
+  demoHeatmap,
+  demoStatus,
+  demoIncidents,
+} from '../../src/core/demoData.js';
 
 describe('демо-дані аналітики', () => {
   it('мають ту саму форму, що й відповіді API', () => {
@@ -38,5 +46,32 @@ describe('демо-дані аналітики', () => {
   it('кількість тестів залежить від періоду, поріг — розумний', () => {
     expect(demoStats(7).count).toBeLessThan(demoStats(30).count);
     expect(DEMO_THRESHOLD).toBeGreaterThan(3);
+  });
+
+  it('стан провайдерів: форма як у /api/status/*, проблемні першими', () => {
+    const now = Date.parse('2026-10-20T12:00:00Z');
+    const s = demoStatus(now);
+    expect(s).toMatchObject({ checkedAt: '2026-10-20T11:57:00.000Z', recentHours: 3, baselineDays: 14 });
+    expect(s.providers.map((p) => p.status)).toEqual(['degraded', 'ok', 'ok', 'ok', 'unknown']);
+    for (const p of s.providers) {
+      expect(Object.keys(p).sort()).toEqual(
+        [
+          'baselineDownload',
+          'baselinePing',
+          'baselineSamples',
+          'isp',
+          'reasons',
+          'recentDownload',
+          'recentPing',
+          'recentSamples',
+          'since',
+          'status',
+        ].sort(),
+      );
+    }
+    const incidents = demoIncidents(now);
+    expect(incidents.filter((i) => i.endedAt === null)).toHaveLength(1);
+    expect(incidents.map((i) => i.startedAt)).toEqual([...incidents.map((i) => i.startedAt)].sort().reverse());
+    for (const i of incidents) if (i.endedAt) expect(Date.parse(i.endedAt)).toBeGreaterThan(Date.parse(i.startedAt));
   });
 });

@@ -40,6 +40,17 @@ export function loadConfig(env = process.env) {
       maxAgeMs: int(env.RESULTS_TOKEN_MAX_AGE_MS, 15 * 60_000),
       perMinute: int(env.RATE_TOKENS_PER_MIN, 20),
     },
+    /** Фонові задачі (jobs.js): стан провайдерів і очищення старих результатів */
+    jobs: {
+      /**
+       * true — задачі виконуються в процесі веб-сервера (Render free: окремий воркер платний).
+       * false — їх виконує окремий процес `node src/worker.js` (docker-compose: сервіс worker).
+       */
+      inline: bool(env.JOBS_INLINE, true),
+      statusEveryMs: int(env.STATUS_CHECK_EVERY_MIN, 10) * 60_000,
+      /** Аналітика показує щонайбільше рік — старіші анонімні результати не потрібні */
+      retentionDays: int(env.RESULTS_RETENTION_DAYS, 400),
+    },
     limits: {
       /** Максимальний розмір одного download/upload-запиту */
       maxTransferBytes: int(env.MAX_TRANSFER_BYTES, 100_000_000),
