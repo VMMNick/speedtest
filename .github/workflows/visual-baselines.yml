@@ -1,0 +1,45 @@
+name: Visual baselines
+
+# Перезнімає еталонні скріншоти в тому ж Linux-середовищі, що й CI, і комітить їх.
+# Запускати вручну після навмисних змін дизайну: Actions → Visual baselines → Run workflow.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: visual-baselines
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Update screenshots
+        run: npm run test:visual:update
+
+      - name: Commit changed baselines
+        run: |
+          if git diff --quiet -- e2e/visual/__screenshots__ && [ -z "$(git ls-files --others --exclude-standard e2e/visual/__screenshots__)" ]; then
+            echo "Еталони не змінилися"
+            exit 0
+          fi
+          git config user.name "VMMNick"
+          git config user.email "devilloner@gmail.com"
+          git add e2e/visual/__screenshots__
+          git commit -m "test(visual): update baselines"
+          git push

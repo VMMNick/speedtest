@@ -31,6 +31,8 @@
     "test:e2e:server": "playwright test -c e2e/server.config.js",
     "test:e2e:cloud": "playwright test -c e2e/cloud.config.js",
     "test:live": "playwright test -c e2e/live.config.js",
+    "test:visual": "playwright test -c e2e/visual.config.js",
+    "test:visual:update": "playwright test -c e2e/visual.config.js --update-snapshots=all",
     "media": "node scripts/capture-media.js"
   },
   "devDependencies": {

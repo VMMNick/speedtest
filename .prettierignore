@@ -8,3 +8,5 @@ playwright-report-live/
 docs/openapi.json
 .lighthouseci/
 lighthouse-report/
+playwright-report-visual/
+test-results-visual/

@@ -28,7 +28,7 @@ Ping · jitter · loss · download · upload · bufferbloat · connection stabil
 - **Bufferbloat.** Ping is also measured _under load_ — what you feel in games and video calls, and what ordinary speed tests do not show.
 - **No UI freezes, even on gigabit.** The whole engine runs in a Web Worker; Chart.js (~¾ of all JS) loads only when needed — initial JS is ~18 KB gzip, and the English dictionary loads only when needed.
 - **Full stack.** An optional Fastify + PostgreSQL + Redis backend: anonymous statistics, a provider ranking and a "when is the internet fastest" heatmap with k-anonymity and cached aggregations.
-- **Production hygiene.** Strict CSP without `unsafe-inline`, a PWA with a hand-written service worker, two languages switched live, WCAG 2.1 AA (axe), ~200 tests, CI with 7 jobs and Lighthouse thresholds on every PR, a daily database backup.
+- **Production hygiene.** Strict CSP without `unsafe-inline`, a PWA with a hand-written service worker, two languages switched live, WCAG 2.1 AA (axe), ~200 tests, CI with 8 jobs: Lighthouse thresholds and visual regression tests on every PR, a daily database backup.
 
 ## Screenshots
 

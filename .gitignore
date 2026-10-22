@@ -18,3 +18,5 @@ playwright-report-live/
 dump.rdb
 .lighthouseci/
 lighthouse-report/
+playwright-report-visual/
+test-results-visual/

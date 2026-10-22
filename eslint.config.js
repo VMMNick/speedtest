@@ -18,6 +18,8 @@ export default [
       '**/playwright-report/',
       '**/playwright-report-live/',
       '**/test-results/',
+      '**/playwright-report-visual/',
+      '**/test-results-visual/',
       '**/.lighthouseci/',
       '**/lighthouse-report/',
     ],

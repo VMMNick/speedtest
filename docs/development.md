@@ -41,17 +41,25 @@ npm run test:e2e:report           # HTML-звіт останнього прог�
 - Фази скорочені до ~1 с через тестовий гачок `window.__SPEEDTEST_CONFIG__` (у звичайній роботі не заданий).
 - Сценарії: англійська за мовою браузера та перемикач мови, PWA (маніфест, офлайн-запуск через SW), поділитися (посилання, PNG, пошкоджене посилання), CSP без порушень, лінивий Chart.js (не вантажиться на старті, графік малюється), повний тест, повторний запуск, зупинка, клавіатура, недоступний сервер, HTTP 429, історія (збереження після перезавантаження, видалення, експорт CSV, очищення), теми без блимання, адаптивність (desktop + Pixel 7), доступність (axe WCAG 2.1 AA у світлій і темній темі, озвучення фаз).
 
+## Візуальні регресійні тести
+
+- `e2e/visual/screens.spec.js`: головна до тесту, результат, сторінка конфіденційності, англійська версія й стан «сервер недоступний», у світлій і темній темах, на десктопі й Pixel 7. Разом 12 знімків.
+- Дані детерміновані: Cloudflare підмінений, результат відкривається з посилання `#r=…` з фіксованими цифрами, часовий пояс `Europe/Kyiv`, анімації вимкнені, змінний пінг у панелі сервера замаскований.
+- Еталони лежать у `e2e/visual/__screenshots__/<desktop|mobile>/`. Шрифти рендеряться по-різному на різних ОС, тому еталоном вважається лише Linux у CI: `npm run test:visual` на Windows чи macOS може показати різницю, і це нормально.
+- Після навмисних змін дизайну: **Actions → Visual baselines → Run workflow**. Workflow перезнімає еталони в тому ж середовищі, що й CI, і комітить їх. Якщо порівняння впало, артефакт `visual-report` показує еталон, фактичний знімок і різницю поруч.
+
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) на кожен push у `main`, pull request і вручну:
 
 1. **quality** (Node 22 і 24): `npm ci` → ESLint → Prettier → typecheck → Vitest → build (артефакт `apps/web/dist`)
 2. **e2e** (після quality): Playwright Chromium з кешем браузера → звіт `playwright-report` (артефакт), трейси при падінні
-3. **lighthouse** (після quality): Lighthouse CI на тій самій збірці — головна сторінка й сторінка конфіденційності, мобільний профіль, медіана з 3 прогонів. Пороги в `lighthouserc.json`: performance ≥ 90, accessibility = 100, best practices ≥ 95, SEO ≥ 90, LCP ≤ 2,5 с, CLS ≤ 0,05, TBT ≤ 200 мс, JS ≤ 40 KB. HTML-звіти — артефакт `lighthouse-report`. Локально: `npm run build && npm run lighthouse` (потрібен Chrome; інший браузер — через `CHROME_PATH`)
-4. **server** — тести сервера з PostgreSQL і Redis + E2E проти self-hosted збірки
-5. **docker** — збірка образу, `docker compose up --wait`, смоук-тест API
-6. **deploy** (лише `main`, після всього вище): збірка з `BASE_PATH=/<repo>/` → GitHub Pages
-7. **live** (після deploy): Playwright проти задеплоєного сайту і **справжнього** Cloudflare — CORS, base path, CSP, повний тест
+3. **visual** (після quality): порівняння скріншотів з еталонами (див. вище)
+4. **lighthouse** (після quality): Lighthouse CI на тій самій збірці — головна сторінка й сторінка конфіденційності, мобільний профіль, медіана з 3 прогонів. Пороги в `lighthouserc.json`: performance ≥ 90, accessibility = 100, best practices ≥ 95, SEO ≥ 90, LCP ≤ 2,5 с, CLS ≤ 0,05, TBT ≤ 200 мс, JS ≤ 40 KB. HTML-звіти — артефакт `lighthouse-report`. Локально: `npm run build && npm run lighthouse` (потрібен Chrome; інший браузер — через `CHROME_PATH`)
+5. **server** — тести сервера з PostgreSQL і Redis + E2E проти self-hosted збірки
+6. **docker** — збірка образу, `docker compose up --wait`, смоук-тест API
+7. **deploy** (лише `main`, після всього вище): збірка з `BASE_PATH=/<repo>/` → GitHub Pages
+8. **live** (після deploy): Playwright проти задеплоєного сайту і **справжнього** Cloudflare — CORS, base path, CSP, повний тест
 
 Dependabot щотижня оновлює npm-залежності (dev-інструменти одним PR) і щомісяця — версії GitHub Actions.
 

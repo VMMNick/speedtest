@@ -116,6 +116,55 @@ jobs:
           path: e2e/test-results/
           retention-days: 7
 
+  visual:
+    name: Visual regression (Playwright)
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install system deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Еталони — e2e/visual/__screenshots__/; оновлення: workflow «Visual baselines»
+      - name: Compare screenshots
+        run: npm run test:visual
+
+      # Звіт показує еталон, фактичний знімок і різницю поруч
+      - name: Upload visual report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-report
+          path: |
+            e2e/playwright-report-visual/
+            e2e/test-results-visual/
+          retention-days: 14
+
   lighthouse:
     name: Lighthouse CI
     needs: quality

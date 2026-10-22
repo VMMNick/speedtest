@@ -400,6 +400,11 @@ export class UIController {
    * @param {{ label: string, onClick: () => void }} [action] кнопка в тості
    */
   toast(message, kind = 'info', ttl = 4500, action = undefined) {
+    // Те саме повідомлення вже на екрані (напр. «сервер недоступний» при завантаженні й після «Старт») —
+    // прибираємо старе, щоб не було двох однакових тостів
+    for (const old of this.el.toasts.querySelectorAll(`.toast--${kind}:not(.is-leaving)`)) {
+      if (old.firstChild?.textContent === message) old.remove();
+    }
     const t = document.createElement('div');
     t.className = `toast toast--${kind}`;
     const text = document.createElement('span');
