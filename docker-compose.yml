@@ -37,9 +37,14 @@ services:
       DATABASE_URL: postgres://speedtest:${POSTGRES_PASSWORD:-speedtest}@db:5432/speedtest
       REDIS_URL: redis://redis:6379
       STATUS_CHECK_EVERY_MIN: ${STATUS_CHECK_EVERY_MIN:-10}
-    # Без власного HTTP — healthcheck образу (/api/health) тут не має сенсу
+    # Без власного HTTP: здоровий, якщо воркер зареєстрований у черзі BullMQ і розклад створено
     healthcheck:
-      disable: true
+      test: ['CMD', 'node', 'apps/server/src/worker-health.js']
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      start_interval: 2s
+      retries: 3
     depends_on:
       app:
         condition: service_healthy

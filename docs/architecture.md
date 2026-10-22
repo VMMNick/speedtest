@@ -27,7 +27,7 @@ speedtest/
 │   │   └── package.json
 │   └── server/                   @speedtest/server — Fastify API
 │       ├── src/               app · config · db · cache · tokens · timezones · openapi
-│       │                      status (правила стану) · status-store (SQL і пам'ять) · jobs (BullMQ) · worker
+│       │                      status (правила стану) · status-store (SQL і пам'ять) · jobs (BullMQ) · worker · worker-health
 │       │                      routes/{speed,results,analytics,status}
 │       ├── migrations/        SQL-міграції (застосовуються при старті)
 │       ├── tests/             юніт, інтеграційні (PostgreSQL/Redis), токени, контрактний тест
