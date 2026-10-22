@@ -18,6 +18,12 @@ test.describe('повний тест', () => {
     }
     await expect(app.locator('#summary-grade')).toHaveText(/^[A-F]$/);
     await expect(app.locator('#usecases li')).toHaveCount(4);
+    // Пояснення: кожен сценарій з умовами й фактичними значеннями
+    await app.getByText('Чому так і які пороги').click();
+    await expect(app.locator('.usecase-explain')).toHaveCount(4);
+    await expect(app.locator('.usecase-explain').filter({ hasText: 'Онлайн-ігри' })).toContainText(
+      /пінг [\d.]+\s?мс \(треба < 60\s?мс\)/,
+    );
     await expect(app.getByRole('button', { name: 'Ще раз' })).toBeVisible();
     await expect(app.getByRole('button', { name: 'Зупинити' })).toBeHidden();
     expect(errors).toEqual([]);
@@ -90,5 +96,21 @@ test.describe('помилки мережі', () => {
       await expect(app.locator('.toast--error')).toContainText('HTTP 429', { timeout: 20_000 });
       await expect(app.locator('body')).not.toHaveClass(/is-running/);
     });
+  });
+});
+
+test.describe('повільна затримка', () => {
+  test.use({ mock: { latencyMs: 80 } });
+
+  test('сценарій, що не підходить, пояснює причину й дає пораду', async ({ app }) => {
+    await runFullTest(app);
+    const gaming = app.locator('#usecases li.bad').filter({ hasText: 'Онлайн-ігри' });
+    await expect(gaming).toContainText(/пінг [\d.]+\s?мс/);
+    await expect(gaming).toHaveAttribute(
+      'aria-label',
+      /^Онлайн-ігри: не підходить — пінг [\d.]+\s?мс \(треба < 60\s?мс\)$/,
+    );
+    await app.getByText('Чому так і які пороги').click();
+    await expect(app.locator('.usecases-advice')).toContainText('спробуйте кабель');
   });
 });

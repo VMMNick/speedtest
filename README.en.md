@@ -11,7 +11,7 @@ Ping · jitter · loss · download · upload · bufferbloat · connection stabil
 [![CI](https://github.com/VMMNick/speedtest/actions/workflows/ci.yml/badge.svg)](https://github.com/VMMNick/speedtest/actions/workflows/ci.yml)
 [![DB backup](https://github.com/VMMNick/speedtest/actions/workflows/backup.yml/badge.svg)](https://github.com/VMMNick/speedtest/actions/workflows/backup.yml)
 ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933?logo=node.js&logoColor=white)
-![Initial JS](https://img.shields.io/badge/initial%20JS-~18%20KB%20gzip-0a7cff)
+![Initial JS](https://img.shields.io/badge/initial%20JS-~19%20KB%20gzip-0a7cff)
 ![Lighthouse](https://img.shields.io/badge/Lighthouse-98%20%C2%B7%20100%20%C2%B7%20100-0cce6b?logo=lighthouse&logoColor=white)
 
 [**Open the demo**](https://vmmnick.github.io/speedtest/) · [Version with analytics](https://speedtest-v003.onrender.com/analytics.html) (the free server takes up to a minute to wake up) · [How it works](docs/measurement.md) · [Architecture](docs/architecture.md)
@@ -26,7 +26,7 @@ Ping · jitter · loss · download · upload · bufferbloat · connection stabil
 
 - **Measurement, not a progress bar.** Speed is the 90th percentile over a sliding window after TCP ramp-up (as Cloudflare and Ookla do it); ping comes from the Resource Timing API with server time subtracted (`Server-Timing`); a phase ends early once speed is stable (CV ≤ 5%). [Details →](docs/measurement.md)
 - **Bufferbloat.** Ping is also measured _under load_ — what you feel in games and video calls, and what ordinary speed tests do not show.
-- **No UI freezes, even on gigabit.** The whole engine runs in a Web Worker; Chart.js (~¾ of all JS) loads only when needed — initial JS is ~18 KB gzip, and the English dictionary loads only when needed.
+- **No UI freezes, even on gigabit.** The whole engine runs in a Web Worker; Chart.js (~¾ of all JS) loads only when needed — initial JS is ~19 KB gzip, and the English dictionary loads only when needed.
 - **Full stack.** An optional Fastify + PostgreSQL + Redis backend: anonymous statistics, a provider ranking and a "when is the internet fastest" heatmap with k-anonymity and cached aggregations.
 - **Background jobs on BullMQ.** Every 10 minutes a worker compares each provider's speed "now" with its usual two weeks, flags degradation and keeps an incident log; once a day it prunes old results.
 - **Production hygiene.** Strict CSP without `unsafe-inline`, a PWA with a hand-written service worker, two languages switched live, WCAG 2.1 AA (axe), ~200 tests, CI with 8 jobs: Lighthouse thresholds and visual regression tests on every PR, a daily database backup.

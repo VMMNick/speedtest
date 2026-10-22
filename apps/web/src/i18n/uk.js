@@ -81,6 +81,25 @@ export default {
   'usecase.browsing': 'Веб-серфінг',
   'usecase.yes': '{name}: підходить',
   'usecase.no': '{name}: не підходить',
+  'usecase.noBecause': '{name}: не підходить — {reason}',
+  'usecase.allOk': 'Усі умови виконано',
+  'usecase.details': 'Чому так і які пороги',
+  'usecase.metric.download': 'завантаження',
+  'usecase.metric.upload': 'вивантаження',
+  'usecase.metric.ping': 'пінг',
+  'usecase.metric.jitter': 'джиттер',
+  'usecase.metric.loss': 'втрати',
+  'usecase.need.lt': 'треба < {limit}',
+  'usecase.need.gte': 'треба ≥ {limit}',
+  'usecase.check': '{metric} {value} ({need})',
+  'usecase.why.streaming4k': 'Потрібна стабільна швидкість завантаження; через втрати плеєр знижує якість.',
+  'usecase.why.videoCalls':
+    'Відео йде в обидва боки, тож важливе й вивантаження. Затримка понад 150 мс заважає розмові, нерівна — рве звук.',
+  'usecase.why.gaming':
+    'Швидкість іграм майже не потрібна: важливі низький і рівний пінг без втрат, інакше гра «смикається».',
+  'usecase.why.browsing': 'Звичайним сторінкам вистачає кількох Мбіт/с.',
+  'usecase.advice':
+    'Високі пінг, джиттер чи втрати найчастіше дає Wi-Fi або завантажена мережа: спробуйте кабель чи підійдіть ближче до роутера, закрийте завантаження й повторіть тест.',
 
   'share.group': 'Поділитися результатом',
   'share.native': 'Поділитися…',

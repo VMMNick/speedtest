@@ -2,6 +2,7 @@
  * Чисті функції для розрахунку метрик мережі.
  * Не мають залежностей від DOM чи мережі — легко тестуються.
  */
+import { useCaseChecks } from './useCases.js';
 
 export const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
@@ -154,14 +155,13 @@ export function stabilityScore({ ping = 0, jitter: j = 0, loss = 0, bloatMs = 0,
   return { score, grade: grade(score), penalties };
 }
 
-/** Чи підходить з'єднання для типових сценаріїв. */
-export function useCases({ download = 0, upload = 0, ping = 0, jitter: j = 0, loss = 0 }) {
-  return {
-    streaming4k: download >= 25 && loss < 2,
-    videoCalls: upload >= 3 && download >= 3 && ping < 150 && j < 30,
-    gaming: ping < 60 && j < 15 && loss < 1,
-    browsing: download >= 2,
-  };
+/**
+ * Чи підходить з'єднання для типових сценаріїв (пороги — у core/useCases.js).
+ * @returns {Record<string, boolean>}
+ */
+export function useCases({ download = 0, upload = 0, ping = 0, jitter = 0, loss = 0 }) {
+  const checks = useCaseChecks({ download, upload, ping, jitter, loss });
+  return Object.fromEntries(Object.entries(checks).map(([k, v]) => [k, v.ok]));
 }
 
 /**

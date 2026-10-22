@@ -80,6 +80,25 @@ export default {
   'usecase.browsing': 'Web browsing',
   'usecase.yes': '{name}: good',
   'usecase.no': '{name}: not suitable',
+  'usecase.noBecause': '{name}: not suitable — {reason}',
+  'usecase.allOk': 'All conditions met',
+  'usecase.details': 'Why, and what the thresholds are',
+  'usecase.metric.download': 'download',
+  'usecase.metric.upload': 'upload',
+  'usecase.metric.ping': 'ping',
+  'usecase.metric.jitter': 'jitter',
+  'usecase.metric.loss': 'loss',
+  'usecase.need.lt': 'needs < {limit}',
+  'usecase.need.gte': 'needs ≥ {limit}',
+  'usecase.check': '{metric} {value} ({need})',
+  'usecase.why.streaming4k': 'Needs steady download speed; packet loss makes the player drop the quality.',
+  'usecase.why.videoCalls':
+    'Video goes both ways, so upload matters too. Delay over 150 ms gets in the way of conversation; uneven delay breaks up the audio.',
+  'usecase.why.gaming':
+    'Games barely need speed: what matters is low, even ping with no loss, otherwise the game stutters.',
+  'usecase.why.browsing': 'Regular web pages are fine with a few Mbps.',
+  'usecase.advice':
+    'High ping, jitter or loss usually comes from Wi-Fi or a busy network: try a cable or move closer to the router, pause downloads and run the test again.',
 
   'share.group': 'Share result',
   'share.native': 'Share…',

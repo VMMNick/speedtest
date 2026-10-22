@@ -278,16 +278,8 @@ export class UIController {
     $('#sum-bloat').textContent = `+${formatMs(r.bufferbloat.delta)} ${t('unit.ms')} · ${r.bufferbloat.grade}`;
     $('#sum-bytes').textContent = formatBytes(r.download.bytes + r.upload.bytes);
 
-    const labels = Object.fromEntries(Object.keys(r.useCases).map((k) => [k, t(`usecase.${k}`)]));
-    $('#usecases').replaceChildren(
-      ...Object.entries(r.useCases).map(([k, ok]) => {
-        const li = document.createElement('li');
-        li.className = ok ? 'ok' : 'bad';
-        li.innerHTML = `<span aria-hidden="true">${ok ? '✓' : '✕'}</span> ${labels[k]}`;
-        li.setAttribute('aria-label', t(ok ? 'usecase.yes' : 'usecase.no', { name: labels[k] }));
-        return li;
-      }),
-    );
+    // Пояснення сценаріїв потрібне лише після тесту — окремим чанком, стартовий бандл не росте
+    import('./useCaseView.js').then((m) => m.renderUseCases(r));
     this.el.summary.hidden = false;
   }
 

@@ -486,10 +486,10 @@
   color: var(--color-success-text);
   border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
 }
+/* Без закреслення: причина поруч читається краще, а ✕ і текст не покладаються лише на колір */
 .usecases li.bad {
   color: var(--color-text-muted);
-  text-decoration: line-through;
-  opacity: 0.8;
+  border-style: dashed;
 }
 
 /* ───── Порівняння з попереднім тестом ───── */
@@ -625,4 +625,68 @@
 /* Значення з посилання — трохи приглушені, щоб не плутати зі своїм тестом */
 body.is-shared .metric [data-value] {
   opacity: 0.85;
+}
+
+/* ───── Чому сценарій не підходить ───── */
+.usecases__reason {
+  font-weight: 400;
+}
+.usecases-details {
+  margin-top: 10px;
+  font-size: 13px;
+}
+.usecases-details > summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.usecases-details > summary:hover {
+  color: var(--color-text);
+}
+.usecases-explain {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.usecase-explain {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+.usecase-explain h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.usecase-explain.ok h4 {
+  color: var(--color-success-text);
+}
+.usecase-explain p {
+  margin: 0 0 6px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+.usecase-explain ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+.usecase-explain li.bad {
+  color: var(--color-danger-text);
+  font-weight: 500;
+}
+.usecase-explain li.ok {
+  color: var(--color-text-muted);
+}
+.usecases-advice {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-border);
+  line-height: 1.4;
 }

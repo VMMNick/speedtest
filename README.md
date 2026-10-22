@@ -11,7 +11,7 @@
 [![CI](https://github.com/VMMNick/speedtest/actions/workflows/ci.yml/badge.svg)](https://github.com/VMMNick/speedtest/actions/workflows/ci.yml)
 [![DB backup](https://github.com/VMMNick/speedtest/actions/workflows/backup.yml/badge.svg)](https://github.com/VMMNick/speedtest/actions/workflows/backup.yml)
 ![Node](https://img.shields.io/badge/node-%E2%89%A522.12-339933?logo=node.js&logoColor=white)
-![Initial JS](https://img.shields.io/badge/initial%20JS-~18%20KB%20gzip-0a7cff)
+![Initial JS](https://img.shields.io/badge/initial%20JS-~19%20KB%20gzip-0a7cff)
 ![Lighthouse](https://img.shields.io/badge/Lighthouse-98%20%C2%B7%20100%20%C2%B7%20100-0cce6b?logo=lighthouse&logoColor=white)
 
 [**Відкрити демо**](https://vmmnick.github.io/speedtest/) · [Версія з аналітикою](https://speedtest-v003.onrender.com/analytics.html) (безкоштовний сервер прокидається до хвилини) · [Як це працює](docs/measurement.md) · [Архітектура](docs/architecture.md)
@@ -24,7 +24,7 @@
 
 - **Вимірювання, а не «прогрес-бар».** Швидкість — 90-й перцентиль у ковзному вікні після розгону TCP (як у Cloudflare й Ookla), пінг — із Resource Timing API з відніманням часу сервера (`Server-Timing`), раннє завершення, коли швидкість стабілізувалась (CV ≤ 5%). [Деталі →](docs/measurement.md)
 - **Bufferbloat.** Окремо міряється пінг _під навантаженням_ — те, що відчувається в іграх і відеодзвінках, але чого не показують звичайні спідтести.
-- **Інтерфейс не фризить навіть на гігабіті.** Увесь рушій працює у Web Worker; Chart.js (~¾ усього JS) вантажиться лише коли знадобиться — стартовий JS ~18 KB gzip, а англійський словник вантажиться лише коли потрібен.
+- **Інтерфейс не фризить навіть на гігабіті.** Увесь рушій працює у Web Worker; Chart.js (~¾ усього JS) вантажиться лише коли знадобиться — стартовий JS ~19 KB gzip, а англійський словник вантажиться лише коли потрібен.
 - **Повний стек.** Опційний бекенд на Fastify + PostgreSQL + Redis: анонімна статистика, рейтинг провайдерів і теплова карта «коли інтернет найшвидший» з k-анонімністю та кешем агрегацій.
 - **Фонові задачі на BullMQ.** Кожні 10 хв воркер порівнює швидкість кожного провайдера «зараз» із його звичайними двома тижнями, позначає деградацію й веде журнал інцидентів; раз на добу прибирає старі результати.
 - **Production-гігієна.** Сувора CSP без `unsafe-inline`, PWA з власним service worker, 2 мови з перемиканням «на льоту», WCAG 2.1 AA (axe), ~200 тестів, CI з 8 джобами: пороги Lighthouse і візуальні регресійні тести в кожному PR, щоденний бекап бази.
